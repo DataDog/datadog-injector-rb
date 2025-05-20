@@ -48,6 +48,12 @@ class << self
         :engine_version => RUBY.engine_version,
         :platform => RUBY.platform,
       },
+      :process => {
+        :exe => PROCESS.exe,
+        :name => PROCESS.name,
+        :args => PROCESS.args,
+        :cmdline => PROCESS.cmdline,
+      },
       :fs => {
         :writable => File.writable?(Dir.pwd),
       },

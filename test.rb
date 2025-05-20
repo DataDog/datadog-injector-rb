@@ -2,6 +2,8 @@
 INJECTION_DIR="/Users/loic.nageleisen/Source/github.com/DataDog/datadog-injector-rb"
 THIS = __dir__
 
+# Idealised syntax
+#
 # fixture:unbundled
 #   for ruby:1.8..3.4 jruby:9.2..9.4
 #     telemetry should include start
@@ -49,7 +51,6 @@ THIS = __dir__
 #       telemetry should include complete
 
 SUITE = [
-# [{ fixture: ['hot', 'deployment', 'frozen'], bundle: 'unlocked' }] => {
   [
     { fixture: 'hot', bundle: 'unlocked' },
     { fixture: 'deployment', bundle: 'unlocked' },
@@ -292,6 +293,31 @@ example 'abort reason should include bundler.unlocked' do |telemetry|
   telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
 end
 
+example 'abort reason should include runtime.engine' do |telemetry|
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.engine') } }
+end
+
+example 'abort reason should include runtime.forkless' do |telemetry|
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
+end
+
+example 'injection should proceed' do |telemetry|
+  # TODO: do it with logs?
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.proceed' } }
+end
+
+example 'injection should succeed' do |telemetry|
+  # TODO: do it with logs?
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.succeed' } }
+end
+
+example 'telemetry should include complete' do |telemetry|
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.complete' } }
+end
+
+example 'abort reason should be empty' do |telemetry|
+  telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
+end
 
 RUNTIMES = {
   'ruby' => {
@@ -313,8 +339,8 @@ RUNTIMES = {
   },
   'jruby' => {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
-    '9.3' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
-    '9.4' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
+    '9.3' => { tag: '9.3-gnu', arch: ['aarch64', 'x86_64'] },
+    '9.4' => { tag: '9.4-gnu', arch: ['aarch64', 'x86_64'] },
   }
 }
 
@@ -326,7 +352,8 @@ def run(*args, engine: nil, version: nil, arch: nil)
   cmd = []
 
   env = {
-    'DD_TELEMETRY_FORWARDER_PATH' => "#{INJECTION_DIR}/forwarder.rb"
+    'DD_TELEMETRY_FORWARDER_PATH' => "#{INJECTION_DIR}/forwarder.rb",
+    'BUNDLE_APP_CONFIG' => "#{Dir.pwd}/.bundle",
   }.merge(env)
 
   if runtime
@@ -336,7 +363,8 @@ def run(*args, engine: nil, version: nil, arch: nil)
     cmd += %W[
       docker run --rm --interactive --tty
       --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
-      --volume datadog-injector-rb-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
+      --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
+      --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
       --volume #{Dir.pwd}:#{Dir.pwd}:rw
       --workdir #{Dir.pwd}
       --platform linux/#{arch}
@@ -360,22 +388,35 @@ def main(argv)
   start = Time.now
   matrix = flatten(SUITE)
   keep = false
+  err = []
+  miss = []
+  fail = []
 
   #pp matrix
   #p matrix.count
   #p matrix.uniq.count
   #pp matrix.group_by { |e| [e[:engine], e[:version]] }
 
-  rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '1.8' && ['deployment', 'frozen'].include?(e[:fixture]) }
+  rows = matrix.uniq
+# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '1.8' && ['hot', 'deployment', 'frozen'].include?(e[:fixture]) }
+# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '1.8' }
+# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '3.4' && e[:bundle] == 'locked' }
+# rows = matrix.uniq.select { |row| row[:engine] == RUBY_ENGINE && row[:version] == (RUBY_VERSION =~ /^(\d+\.\d+)/ && $1) }
+# rows = matrix.uniq.select { |row| row[:engine] == 'ruby' }
+# rows = matrix.uniq.select { |row| row[:engine] == 'ruby' && row[:version] == '3.4' && row[:fixture] == 'hot' }
+# rows = matrix.uniq.select { |row| row[:engine] == 'jruby' && row[:version] == '9.2' && row[:fixture] == 'hot' }
+# rows = matrix.uniq.select { |row| row[:engine] == 'jruby' }
+# rows = matrix.uniq.select { |row| row == {bundle: "locked", fixture: "deployment", engine: "jruby", version: "9.2", test: "injection should abort"} }
 
   require 'fileutils'
   require 'securerandom'
   require 'json'
 
   rows.each do |row|
-    puts "=== run: #{row.inspect}"
+    uuid = SecureRandom.uuid
+    puts "=== run: #{row.inspect} uuid: #{uuid}"
 
-    tmp = "#{INJECTION_DIR}/test/tmp/run/hot-#{SecureRandom.uuid}"
+    tmp = "#{INJECTION_DIR}/test/tmp/run/#{row[:fixture]}-#{uuid}"
     FileUtils.mkdir_p(tmp)
     begin
       fixture = row[:fixture]
@@ -386,10 +427,21 @@ def main(argv)
       Dir.chdir tmp do
         Dir.chdir fixture do
           if lock
+            # ignore fixture config, notably development/frozen which would prevent lock
+            env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
+            pid = run env, *%W[ bundle lock ], engine: row[:engine], version: row[:version]
+            _pid, status = Process.waitpid2(pid)
+            if status.exitstatus != 0
+              puts "==> ERR"
+              err << row
+              next
+            end
+
             pid = run *%W[ bundle install ], engine: row[:engine], version: row[:version]
             _pid, status = Process.waitpid2(pid)
             if status.exitstatus != 0
               puts "==> ERR"
+              err << row
               next
             end
           end
@@ -400,13 +452,14 @@ def main(argv)
                 else
                   {}
                 end
+          env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
 
-          pid = run({ 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env),
-                    *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
-                    engine: row[:engine], version: row[:version])
+          pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
+                    engine: row[:engine], version: row[:version]
           _pid, status = Process.waitpid2(pid)
           if status.exitstatus != 0
             puts "==> ERR"
+            err << row
             next
           end
 
@@ -416,10 +469,12 @@ def main(argv)
 
             if test.nil?
               puts "==> MISS"
+              miss << row[:test]
             elsif test.call(telemetry)
               puts "==> OK"
             else
               puts "==> FAIL"
+              fail << row
             end
 
           # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
@@ -432,7 +487,29 @@ def main(argv)
   end
 
   delta = Time.now - start
-  puts "=== ran:#{rows.count} time:#{delta}"
+
+  if fail.count > 0
+    puts "\n!!! failed: #{fail.count}"
+    fail.uniq.each do |f|
+      puts "!!! -- #{f.inspect}"
+    end
+  end
+
+  if err.count > 0
+    puts "\n!!! errors: #{err.count}"
+    err.uniq.each do |e|
+      puts "!!! -- #{e.inspect}"
+    end
+  end
+
+  if miss.count > 0
+    puts "\n!!! missing: #{miss.uniq.count}"
+    miss.uniq.each { |m| puts "!!! -- #{m}" }
+  end
+
+  puts "\n=== ran:#{rows.count} fail:#{fail.count} miss:#{miss.uniq.count} err:#{err.count} time:#{delta}"
+
+  exit 1 if fail.count + miss.count > 0
 end
 
 

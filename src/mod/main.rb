@@ -32,9 +32,20 @@ if (result = guard.call(context.status))
 
 # stage 3: inject
 else
+  telemetry.emit([
+    { :name => 'library_entrypoint.proceed' },
+  ])
   log.info { 'inject:proceed' }
 
   injector = import 'injector'
 
   injector.call
+
+  telemetry.emit([
+    { :name => 'library_entrypoint.succeed' },
+  ])
+
+  telemetry.emit([
+    { :name => 'library_entrypoint.complete' },
+  ])
 end

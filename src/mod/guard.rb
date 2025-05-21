@@ -20,8 +20,28 @@ class << self
       result << { :name => 'runtime.fork', :reason => 'runtime.forkless' }
     end
 
+    if !status[:bundler][:bundled]
+      result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
+    end
+
+    if !status[:bundler][:locked]
+      result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
+    end
+
+    if status[:bundler][:frozen]
+      result << { :name => 'bundler.frozen', :reason => 'bundler.frozen' }
+    end
+
     if !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
+    end
+
+    if status[:bundler][:bundle_path]
+      result << { :name => 'bundler.bundle_path', :reason => 'bundler.path' }
+    end
+
+    if status[:bundler][:deployment]
+      result << { :name => 'bundler.deployment', :reason => 'bundler.deployment' }
     end
 
     result unless result.empty?

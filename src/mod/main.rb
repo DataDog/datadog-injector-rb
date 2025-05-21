@@ -4,7 +4,12 @@
 #
 # This module gets evaluated immediately
 
+telemetry = import 'telemetry'
 process = import 'process'
+
+# Emit start immediately
+telemetry.emit([{ :name => 'library_entrypoint.start' }])
+
 log = import 'log'
 
 # stage 1: gather context
@@ -20,11 +25,26 @@ if (result = guard.call(context.status))
 
   tags = result.map { |r| "reason:#{r[:reason]}" }
 
+  telemetry.emit([
+    { :name => 'library_entrypoint.abort', :tags => tags },
+  ])
+
 # stage 3: inject
 else
+  telemetry.emit([
+    { :name => 'library_entrypoint.proceed' },
+  ])
   log.info { 'inject:proceed' }
 
   injector = import 'injector'
 
   injector.call
+
+  telemetry.emit([
+    { :name => 'library_entrypoint.succeed' },
+  ])
+
+  telemetry.emit([
+    { :name => 'library_entrypoint.complete' },
+  ])
 end

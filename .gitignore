@@ -1,0 +1,12 @@
+# this repository must NOT have a toplevel `Gemfile`
+/Gemfile
+/Gemfile.lock
+
+# transient files
+/test/tmp/
+/tmp/
+
+# tooling
+/.ruby-lsp/
+/.direnv/
+/.envrc

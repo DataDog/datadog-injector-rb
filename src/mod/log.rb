@@ -1,5 +1,7 @@
 # ruby-version-min: 1.8.7
 
+PROCESS = import 'process'
+
 DEBUG   = 0
 INFO    = 1
 WARN    = 2
@@ -78,7 +80,7 @@ class << self
              else              'UNKNOWN'
              end
 
-    sprintf(Format, sevstr, format_datetime(time), Process.pid, sevstr, progname, msg2str(message))
+    sprintf(Format, sevstr, format_datetime(time), PROCESS.pid, sevstr, progname, msg2str(message))
   end
 
   def format_datetime(time)

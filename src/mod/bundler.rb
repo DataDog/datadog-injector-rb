@@ -14,6 +14,7 @@ class << self
       :deployment        => Bundler.settings[:deployment],
       :root              => (Bundler.root rescue nil),
       :bundle_path       => (Bundler.bundle_path rescue nil),
+      :use_system_gems   => (Bundler.settings.path.use_system_gems? rescue nil),
       :home              => (Bundler.home rescue nil),
       :install_path      => (Bundler.install_path rescue nil),
       :app_config_path   => (Bundler.app_config_path rescue nil),

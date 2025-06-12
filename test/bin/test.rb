@@ -161,6 +161,57 @@ SUITE = [
         'abort reason should include bundler.frozen',
       ],
     },
+    { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
+      [
+        { engine: 'ruby', version: '1.8' },
+        { engine: 'ruby', version: '1.9' },
+        { engine: 'ruby', version: '2.0' },
+        { engine: 'ruby', version: '2.1' },
+        { engine: 'ruby', version: '2.2' },
+        { engine: 'ruby', version: '2.3' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'abort reason should include runtime.parser',
+      ],
+      [
+        { engine: 'ruby', version: '1.8' },
+        { engine: 'ruby', version: '1.9' },
+        { engine: 'ruby', version: '2.0' },
+        { engine: 'ruby', version: '2.1' },
+        { engine: 'ruby', version: '2.2' },
+        { engine: 'ruby', version: '2.3' },
+        { engine: 'ruby', version: '2.4' },
+        { engine: 'ruby', version: '2.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'abort reason should include runtime.version',
+      ],
+      [
+        { engine: 'jruby', version: '9.2' },
+        { engine: 'jruby', version: '9.3' },
+        { engine: 'jruby', version: '9.4' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'abort reason should include runtime.engine',
+        'abort reason should include runtime.forkless',
+      ],
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'abort reason should include bundler.vendored',
+      ],
+    },
     { fixture: 'hot' } => {
       [
         { engine: 'ruby', version: '1.8' },
@@ -278,6 +329,10 @@ end
 
 example 'abort reason should include bundler.unlocked' do |telemetry|
   telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
+end
+
+example 'abort reason should include bundler.vendored' do |telemetry|
+  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
 end
 
 example 'abort reason should include runtime.engine' do |telemetry|

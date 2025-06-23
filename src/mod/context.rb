@@ -1,10 +1,43 @@
 # ruby-version-min: 1.8.7
 
 PROCESS = import 'process'
+BUNDLER = import 'bundler'
 RUBY = import 'ruby'
 RUNTIME = import 'runtime'
 
 class << self
+  def isolate(&block)
+    return block.call unless Process.respond_to?(:fork)
+
+    PROCESS.child_eval do
+      begin
+        result = primitive(block.call)
+      rescue Exception => e
+        exc = StandardError.new "#{e.class.name}: #{e.message}"
+        exc.set_backtrace(e.backtrace)
+      end
+
+      # raise outside of rescue to not set Exception#cause
+      raise exc if exc
+
+      result
+    end
+  end
+
+  def primitive(val)
+    case val
+    when String, Symbol, Integer, Float, TrueClass, FalseClass, NilClass
+      val
+    when Array
+      val.map { |v| primitive(v) }
+    when Hash
+      Hash[val.map { |k, v| [primitive(k), primitive(v)] }]
+    else
+      val.to_s
+    end
+  end
+  private :primitive
+
   def status
     {
       :ruby => {
@@ -30,6 +63,7 @@ class << self
         :version => RUNTIME.version,
         :name => RUNTIME.name,
       },
+      :bundler => isolate { BUNDLER.status }
     }
   end
 end

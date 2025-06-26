@@ -1,0 +1,55 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: linux
+            cpu: x86_64
+            base: ubuntu-24.04
+        # TODO: arm not available for private repos; enable when going public
+        # - os: linux
+        #   cpu: aarch64
+        #   base: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.platform.base }}
+
+    steps:
+      - name: Check CPU arch
+        run: |
+          test "$(uname -m)" = "${{ matrix.platform.cpu }}"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@13e7a03dc3ac6c3798f4570bfead2aed4d96abfb # v1.244.0
+        with:
+          ruby-version: "3.4"
+          bundler-cache: false
+      - name: Set up Docker with containerd
+        uses: docker/setup-docker-action@b60f85385d03ac8acfca6d9996982511d8620a19 # v4.3.0
+        with:
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+      - name: Run tests
+        run: ruby test/bin/test.rb
+        env:
+          DOCKER_BUILDKIT: 1

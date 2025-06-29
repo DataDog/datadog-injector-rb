@@ -16,24 +16,23 @@ class << self
     package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, RUBY.api_version)
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
-    # TODO: these are in context
-    # pinpoint app gemfile and lockfile
-    app_gemfile  = Bundler.default_gemfile
-    app_lockfile = Bundler.default_lockfile
-
-    # determine output paths
-    # out = File.join(app_gemfile.dirname, 'tmp', 'datadog')
-    out = File.join(app_gemfile.dirname)
-
-    # TODO: hash path + content to detect changes
-    datadog_gemfile  = File.join(out, 'datadog.gemfile')
-    datadog_lockfile = File.join(out, 'datadog.gemfile.lock')
-
-    success = CONTEXT.isolate do
-
+    gemfile = CONTEXT.isolate do
       ENV['GEM_PATH'] = package_gem_home
 
       BUNDLER.send(:require!)
+
+      # TODO: these are in context
+      # pinpoint app gemfile and lockfile
+      app_gemfile  = Bundler.default_gemfile
+      app_lockfile = Bundler.default_lockfile
+
+      # determine output paths
+      # out = File.join(app_gemfile.dirname, 'tmp', 'datadog')
+      out = File.join(app_gemfile.dirname)
+
+      # TODO: hash path + content to detect changes
+      datadog_gemfile  = File.join(out, 'datadog.gemfile')
+      datadog_lockfile = File.join(out, 'datadog.gemfile.lock')
 
       # TODO: this could be gathered in context
       # list gems packaged for injection
@@ -48,15 +47,15 @@ class << self
       injector = Bundler::Injector.new(gems)
       added = injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
 
-      true
+      datadog_gemfile
     end
 
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
-    if success
+    if gemfile
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
-      ENV['BUNDLE_GEMFILE'] = datadog_gemfile
+      ENV['BUNDLE_GEMFILE'] = gemfile
     end
   end
 

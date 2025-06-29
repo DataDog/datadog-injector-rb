@@ -51,6 +51,8 @@ class << self
       true
     end
 
+    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
+
     if success
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)

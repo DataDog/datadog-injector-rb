@@ -16,7 +16,7 @@ class << self
     CONTEXT.isolate do
       BUNDLER.send(:require!)
 
-      package_basepath = ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.join(__FILE__, '..', '..', 'package')
+      package_basepath = ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.expand_path(File.join(File.dirname(__FILE__), '..'))
       package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, RUBY.api_version)
       package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 

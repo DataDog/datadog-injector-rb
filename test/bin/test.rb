@@ -299,66 +299,66 @@ def example(desc, &block)
   EXAMPLES[desc] = block
 end
 
-example 'telemetry should include start' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.start' } }
+example 'telemetry should include start' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.start' } }
 end
 
-example 'injection should abort' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' } }
+example 'injection should abort' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' } }
 end
 
-example 'abort reason should include runtime.version' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.version') } }
+example 'abort reason should include runtime.version' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.version') } }
 end
 
-example 'abort reason should include runtime.parser' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.parser') } }
+example 'abort reason should include runtime.parser' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.parser') } }
 end
 
-example 'abort reason should include bundler.deployment' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.deployment') } }
+example 'abort reason should include bundler.deployment' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.deployment') } }
 end
 
-example 'abort reason should include bundler.frozen' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.frozen') } }
+example 'abort reason should include bundler.frozen' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.frozen') } }
 end
 
-example 'abort reason should include bundler.unbundled' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unbundled') } }
+example 'abort reason should include bundler.unbundled' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unbundled') } }
 end
 
-example 'abort reason should include bundler.unlocked' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
+example 'abort reason should include bundler.unlocked' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
 end
 
-example 'abort reason should include bundler.vendored' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
+example 'abort reason should include bundler.vendored' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
 end
 
-example 'abort reason should include runtime.engine' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.engine') } }
+example 'abort reason should include runtime.engine' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.engine') } }
 end
 
-example 'abort reason should include runtime.forkless' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
+example 'abort reason should include runtime.forkless' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
 end
 
-example 'injection should proceed' do |telemetry|
+example 'injection should proceed' do |context|
   # TODO: do it with logs?
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.proceed' } }
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.proceed' } }
 end
 
-example 'injection should succeed' do |telemetry|
+example 'injection should succeed' do |context|
   # TODO: do it with logs?
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.succeed' } }
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.succeed' } }
 end
 
-example 'telemetry should include complete' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.complete' } }
+example 'telemetry should include complete' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.complete' } }
 end
 
-example 'abort reason should be empty' do |telemetry|
-  telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
+example 'abort reason should be empty' do |context|
+  context.telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
 end
 
 RUNTIMES = {
@@ -448,6 +448,15 @@ def run(*args, engine: nil, version: nil, arch: nil)
 
 # spawn(env, *cmd, [:out, :err] => '/dev/null')
   spawn(env, *cmd)
+end
+
+class Context
+  attr_reader :telemetry, :path
+
+  def initialize(telemetry: telemetry, path: path)
+    @telemetry = telemetry
+    @path = path
+  end
 end
 
 def main(argv)
@@ -540,10 +549,17 @@ def main(argv)
             test = EXAMPLES[row[:test]]
             telemetry = File.open("#{tmp}/forwarder.log") { |f| f.each_line.map { |l| JSON.parse(l) } }
 
+            context = Context.new(
+              telemetry: telemetry,
+              path: Dir.pwd,
+
+              # TODO: add stdout+stderr
+            )
+
             if test.nil?
               puts "==> MISS"
               miss << row[:test]
-            elsif test.call(telemetry)
+            elsif test.call(context)
               puts "==> OK"
             else
               puts "==> FAIL"

@@ -38,7 +38,10 @@ else
 
   injector = import 'injector'
 
-  injector.call
+  # TODO: pass args: gem list + location, ...
+  injector.call unless ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+
+  log.info { 'inject:complete' }
 
   telemetry.emit([
     { :name => 'library_entrypoint.succeed' },

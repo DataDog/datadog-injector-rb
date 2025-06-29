@@ -525,6 +525,7 @@ def main(argv)
                   {}
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
+          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
 
           pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
                     engine: row[:engine], version: row[:version]

@@ -265,6 +265,22 @@ SUITE = [
         'abort reason should be empty',
       ],
     },
+    { fixture: 'hot', inject: true, injector: 'datadog' } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'gemfile should include datadog',
+        'lockfile should include datadog',
+        'gem datadog should have require option',
+      ],
+    }
   ]
 ]
 
@@ -359,6 +375,21 @@ end
 
 example 'abort reason should be empty' do |context|
   context.telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
+end
+
+example 'gemfile should include datadog' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.read(gemfile).include?('gem "datadog"')
+end
+
+example 'lockfile should include datadog' do |context|
+  lockfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.read(lockfile).include?(' datadog ')
+end
+
+example 'gem datadog should have require option' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{:require => "datadog/single_step_instrument"})
 end
 
 RUNTIMES = {
@@ -535,6 +566,7 @@ def main(argv)
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
           env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
+          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
 
           pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
                     engine: row[:engine], version: row[:version]

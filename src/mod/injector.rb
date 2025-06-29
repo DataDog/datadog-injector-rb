@@ -1,7 +1,7 @@
 # ruby-version-min: 1.8.7
 
 LOG = import 'log'
-PROCESS = import 'process'
+CONTEXT = import 'context'
 BUNDLER = import 'bundler'
 RUBY = import 'ruby'
 
@@ -13,8 +13,7 @@ class << self
     # TODO: check if injection already performed
 
     # parse lock file
-    # TODO: more like isolate?
-    PROCESS.child_eval do
+    CONTEXT.isolate do
       BUNDLER.send(:require!)
 
       package_basepath = ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.join(__FILE__, '..', '..', 'package')

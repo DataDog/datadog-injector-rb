@@ -17,7 +17,7 @@ class << self
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
     gemfile = CONTEXT.isolate do
-      ENV['GEM_PATH'] = package_gem_home
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
 

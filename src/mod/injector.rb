@@ -5,6 +5,45 @@ CONTEXT = import 'context'
 BUNDLER = import 'bundler'
 RUBY = import 'ruby'
 
+module Patch
+  module Injector
+    # - https://github.com/rubygems/rubygems/blob/v3.3.26/bundler/lib/bundler/injector.rb#L25
+    # - https://github.com/rubygems/rubygems/blob/v3.5.6/bundler/lib/bundler/injector.rb#L25
+    # - https://github.com/rubygems/rubygems/blob/v3.6.9/bundler/lib/bundler/injector.rb#L25
+    def inject(gemfile_path, lockfile_path)
+      # TODO: Bundler.definition is side-effectful
+      # TODO: also it does not uses gempfile_path: report upstream?
+      # Bundler.definition.ensure_equivalent_gemfile_and_lockfile(true)
+
+      Bundler.settings.temporary(:deployment => false, :frozen => false) do
+        builder = Bundler::Dsl.new
+        builder.eval_gemfile(gemfile_path)
+
+        @deps -= builder.dependencies
+
+        builder.eval_gemfile(Bundler::Injector::INJECTED_GEMS, build_gem_lines(false)) if @deps.any?
+
+        @definition = builder.to_definition(lockfile_path, {})
+        @definition.resolve_remotely!
+      # @definition.resolve_prefering_local!
+      # @definition.resolve_only_locally!
+
+        append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning])) if @deps.any?
+
+        if Bundler::VERSION < '3.5.6'
+          @definition.lock(lockfile_path)
+        else
+          @definition.lock
+        end
+
+        Bundler.reset_paths!
+
+        @deps
+      end
+    end
+  end
+end
+
 class << self
   def call
     LOG.info { 'injector:call' }
@@ -16,6 +55,7 @@ class << self
     package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, RUBY.api_version)
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
+    # TODO: capture stdout+stderr
     gemfile = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
@@ -45,6 +85,7 @@ class << self
 
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
       injector = Bundler::Injector.new(gems)
+      injector.singleton_class.prepend(Patch::Injector)
       added = injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
 
       datadog_gemfile

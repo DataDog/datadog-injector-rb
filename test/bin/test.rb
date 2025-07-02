@@ -265,7 +265,7 @@ SUITE = [
         'abort reason should be empty',
       ],
     },
-    { fixture: 'hot', inject: true, injector: 'datadog' } => {
+    { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
         { engine: 'ruby', version: '2.7' },
@@ -276,8 +276,10 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
       ] => [
         'telemetry should include complete',
-        'gemfile should include datadog',
-        'lockfile should include datadog',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
         'gem datadog should have require option',
       ],
     }
@@ -377,12 +379,22 @@ example 'abort reason should be empty' do |context|
   context.telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
 end
 
-example 'gemfile should include datadog' do |context|
+example 'app gemfile should not include datadog' do |context|
+  gemfile = File.join(context.path, 'Gemfile')
+  !File.read(gemfile).include?('gem "datadog"')
+end
+
+example 'app lockfile should not include datadog' do |context|
+  lockfile = File.join(context.path, 'Gemfile.lock')
+  !File.read(lockfile).include?(' datadog ')
+end
+
+example 'new gemfile should include datadog' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
   File.read(gemfile).include?('gem "datadog"')
 end
 
-example 'lockfile should include datadog' do |context|
+example 'new lockfile should include datadog' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   File.read(lockfile).include?(' datadog ')
 end
@@ -535,6 +547,21 @@ def main(argv)
       FileUtils.cp_r "test/fixtures/#{fixture}", tmp
 
       lock = row[:bundle] == 'locked'
+      packaged = row[:packaged]
+
+      if packaged
+        package_basepath = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
+        package_gem_home = "#{package_basepath}/#{row[:version]}.0"
+
+        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
+        pid = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version]
+        _pid, status = Process.waitpid2(pid)
+        if status.exitstatus != 0
+          puts "==> ERR"
+          err << row
+          next
+        end
+      end
 
       Dir.chdir tmp do
         Dir.chdir fixture do

@@ -19,14 +19,27 @@ module Patch
         builder = Bundler::Dsl.new
         builder.eval_gemfile(gemfile_path)
 
-        @deps -= builder.dependencies
+        # TODO: this should
+        # - build list of app deps:
+        #   `original_definition = builder.to_definition(lockfile_path, {})`
+        # - for each new gem dep, if in active app gems then remove dep by name:
+        #   `original_definition.specs.find { |s| s.name == 'ffi' }`
+        # - else if in inactive deps => abort?:
+        #   `original_definition.current_dependencies.find { |dep| dep.name == 'ffi'}`
+        # - else keep it
+        @deps.reject! { |d| builder.dependencies.any? { |dep| dep.name == d.name } }
 
+        # aborts if gem added twice
         builder.eval_gemfile(Bundler::Injector::INJECTED_GEMS, build_gem_lines(false)) if @deps.any?
 
         @definition = builder.to_definition(lockfile_path, {})
+
+        # aborts when gems are incompatible
         @definition.resolve_remotely!
-      # @definition.resolve_prefering_local!
-      # @definition.resolve_only_locally!
+
+        # TODO: ideally, resolve only locally to avoid hitting rubygems
+        # @definition.resolve_prefering_local!
+        # @definition.resolve_only_locally!
 
         append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning])) if @deps.any?
 

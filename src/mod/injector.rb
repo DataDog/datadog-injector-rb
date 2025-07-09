@@ -43,7 +43,7 @@ module Patch
 
         append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning])) if @deps.any?
 
-        if Bundler::VERSION < '3.5.6'
+        if Gem::Requirement.new('< 2.5.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
           @definition.lock(lockfile_path)
         else
           @definition.lock

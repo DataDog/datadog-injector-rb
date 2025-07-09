@@ -4,6 +4,7 @@
 
 # transient files
 /test/tmp/
+/test/packages/
 /tmp/
 
 # tooling

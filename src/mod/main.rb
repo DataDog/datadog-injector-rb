@@ -12,6 +12,8 @@ telemetry.emit([{ :name => 'library_entrypoint.start' }])
 
 log = import 'log'
 
+# TODO: config
+
 # stage 1: gather context
 context = import 'context'
 
@@ -38,16 +40,34 @@ else
 
   injector = import 'injector'
 
-  # TODO: pass args: gem list + location, ...
-  injector.call unless ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+  if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+    telemetry.emit([
+      { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
+    ])
+  else
+    begin
+      # TODO: pass args, e.g context, location, etc...
+      injected, err = injector.call
 
-  log.info { 'inject:complete' }
+      if err
+        telemetry.emit([
+          { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
+        ])
+      else
+        telemetry.emit([
+          { :name => 'library_entrypoint.succeed' },
+        ])
 
-  telemetry.emit([
-    { :name => 'library_entrypoint.succeed' },
-  ])
+        log.info { 'inject:complete' }
 
-  telemetry.emit([
-    { :name => 'library_entrypoint.complete' },
-  ])
+        telemetry.emit([
+          { :name => 'library_entrypoint.complete' },
+        ])
+      end
+    rescue StandardError => _e
+      telemetry.emit([
+        { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
+      ])
+    end
+  end
 end

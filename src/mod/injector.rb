@@ -69,7 +69,7 @@ class << self
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
     # TODO: capture stdout+stderr
-    gemfile = CONTEXT.isolate do
+    gemfile, err = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
@@ -99,18 +99,27 @@ class << self
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
       injector = Bundler::Injector.new(gems)
       injector.singleton_class.prepend(Patch::Injector)
-      added = injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
 
-      datadog_gemfile
+      begin
+        injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
+
+        [datadog_gemfile, nil]
+      rescue
+        [nil, "bundler.inject"]
+      end
     end
 
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
-    if gemfile
-      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
-      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
-      ENV['BUNDLE_GEMFILE'] = gemfile
-    end
+    return [nil, err] if err
+
+    return [false, nil] unless gemfile
+
+    Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
+    ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    ENV['BUNDLE_GEMFILE'] = gemfile
+
+    [true, nil]
   end
 
   def options_for(name)

@@ -265,6 +265,24 @@ SUITE = [
         'abort reason should be empty',
       ],
     },
+    { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+      ],
+    }
   ]
 ]
 
@@ -299,66 +317,91 @@ def example(desc, &block)
   EXAMPLES[desc] = block
 end
 
-example 'telemetry should include start' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.start' } }
+example 'telemetry should include start' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.start' } }
 end
 
-example 'injection should abort' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' } }
+example 'injection should abort' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' } }
 end
 
-example 'abort reason should include runtime.version' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.version') } }
+example 'abort reason should include runtime.version' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.version') } }
 end
 
-example 'abort reason should include runtime.parser' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.parser') } }
+example 'abort reason should include runtime.parser' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.parser') } }
 end
 
-example 'abort reason should include bundler.deployment' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.deployment') } }
+example 'abort reason should include bundler.deployment' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.deployment') } }
 end
 
-example 'abort reason should include bundler.frozen' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.frozen') } }
+example 'abort reason should include bundler.frozen' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.frozen') } }
 end
 
-example 'abort reason should include bundler.unbundled' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unbundled') } }
+example 'abort reason should include bundler.unbundled' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unbundled') } }
 end
 
-example 'abort reason should include bundler.unlocked' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
+example 'abort reason should include bundler.unlocked' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.unlocked') } }
 end
 
-example 'abort reason should include bundler.vendored' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
+example 'abort reason should include bundler.vendored' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
 end
 
-example 'abort reason should include runtime.engine' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.engine') } }
+example 'abort reason should include runtime.engine' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.engine') } }
 end
 
-example 'abort reason should include runtime.forkless' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
+example 'abort reason should include runtime.forkless' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
 end
 
-example 'injection should proceed' do |telemetry|
+example 'injection should proceed' do |context|
   # TODO: do it with logs?
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.proceed' } }
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.proceed' } }
 end
 
-example 'injection should succeed' do |telemetry|
+example 'injection should succeed' do |context|
   # TODO: do it with logs?
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.succeed' } }
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.succeed' } }
 end
 
-example 'telemetry should include complete' do |telemetry|
-  telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.complete' } }
+example 'telemetry should include complete' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.complete' } }
 end
 
-example 'abort reason should be empty' do |telemetry|
-  telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
+example 'abort reason should be empty' do |context|
+  context.telemetry.all? { |e| e['points'].all? { |p| p['name'] != 'library_entrypoint.abort' } }
+end
+
+example 'app gemfile should not include datadog' do |context|
+  gemfile = File.join(context.path, 'Gemfile')
+  !File.read(gemfile).include?('gem "datadog"')
+end
+
+example 'app lockfile should not include datadog' do |context|
+  lockfile = File.join(context.path, 'Gemfile.lock')
+  !File.read(lockfile).include?(' datadog ')
+end
+
+example 'new gemfile should include datadog' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.read(gemfile).include?('gem "datadog"')
+end
+
+example 'new lockfile should include datadog' do |context|
+  lockfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.read(lockfile).include?(' datadog ')
+end
+
+example 'gem datadog should have require option' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{:require => "datadog/single_step_instrument"})
 end
 
 RUNTIMES = {
@@ -450,6 +493,15 @@ def run(*args, engine: nil, version: nil, arch: nil)
   spawn(env, *cmd)
 end
 
+class Context
+  attr_reader :telemetry, :path
+
+  def initialize(telemetry: telemetry, path: path)
+    @telemetry = telemetry
+    @path = path
+  end
+end
+
 def main(argv)
   keep = false # TODO: handle from command line
 
@@ -495,6 +547,21 @@ def main(argv)
       FileUtils.cp_r "test/fixtures/#{fixture}", tmp
 
       lock = row[:bundle] == 'locked'
+      packaged = row[:packaged]
+
+      if packaged
+        package_basepath = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
+        package_gem_home = "#{package_basepath}/#{row[:version]}.0"
+
+        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
+        pid = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version]
+        _pid, status = Process.waitpid2(pid)
+        if status.exitstatus != 0
+          puts "==> ERR"
+          err << row
+          next
+        end
+      end
 
       Dir.chdir tmp do
         Dir.chdir fixture do
@@ -525,6 +592,8 @@ def main(argv)
                   {}
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
+          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
+          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
 
           pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
                     engine: row[:engine], version: row[:version]
@@ -539,10 +608,17 @@ def main(argv)
             test = EXAMPLES[row[:test]]
             telemetry = File.open("#{tmp}/forwarder.log") { |f| f.each_line.map { |l| JSON.parse(l) } }
 
+            context = Context.new(
+              telemetry: telemetry,
+              path: Dir.pwd,
+
+              # TODO: add stdout+stderr
+            )
+
             if test.nil?
               puts "==> MISS"
               miss << row[:test]
-            elsif test.call(telemetry)
+            elsif test.call(context)
               puts "==> OK"
             else
               puts "==> FAIL"

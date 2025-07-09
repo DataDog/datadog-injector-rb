@@ -33,14 +33,13 @@ if (result = guard.call(context.status))
 
 # stage 3: inject
 else
-  telemetry.emit([
-    { :name => 'library_entrypoint.proceed' },
-  ])
   log.info { 'inject:proceed' }
 
   injector = import 'injector'
 
   if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+    log.info { 'inject:skip' }
+
     telemetry.emit([
       { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
     ])
@@ -54,10 +53,6 @@ else
           { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
         ])
       else
-        telemetry.emit([
-          { :name => 'library_entrypoint.succeed' },
-        ])
-
         log.info { 'inject:complete' }
 
         telemetry.emit([
@@ -65,6 +60,8 @@ else
         ])
       end
     rescue StandardError => _e
+      log.info { 'inject:error' }
+
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
       ])

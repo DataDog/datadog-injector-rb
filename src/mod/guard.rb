@@ -20,6 +20,14 @@ class << self
       result << { :name => 'runtime.fork', :reason => 'runtime.forkless' }
     end
 
+    if lower(status[:bundler][:rubygems], 3, 3, 26)
+      result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
+    end
+
+    if lower(status[:bundler][:version], 2, 3, 26)
+      result << { :name => 'bundler.version', :reason => 'bundler.version' }
+    end
+
     if !status[:bundler][:bundled]
       result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
     end
@@ -45,5 +53,15 @@ class << self
     end
 
     result unless result.empty?
+  end
+
+  def lower(str, exp_maj, exp_min, exp_patch)
+    act_maj, act_min, act_patch = str.split('.').take(3).map(&:to_i)
+
+    return true if act_maj < exp_maj
+    return true if act_maj == exp_maj && act_min < exp_min
+    return true if act_maj == exp_maj && act_min == exp_min && act_patch < exp_patch
+
+    false
   end
 end

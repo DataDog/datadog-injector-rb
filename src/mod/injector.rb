@@ -35,6 +35,7 @@ module Patch
         @definition = builder.to_definition(lockfile_path, {})
 
         # aborts when gems are incompatible
+        # e.g Bundler::SolveFailure (but only for bundler >2.4.0)
         @definition.resolve_remotely!
 
         # TODO: ideally, resolve only locally to avoid hitting rubygems
@@ -80,8 +81,13 @@ class << self
       app_lockfile = Bundler.default_lockfile
 
       # determine output paths
-      # out = File.join(app_gemfile.dirname, 'tmp', 'datadog')
       out = File.join(app_gemfile.dirname)
+
+      # TODO: this should work, unless the app's Gemfile has relative references...
+      # if File.writable?(File.join(out, 'tmp'))
+      #   out = File.join(out, 'tmp', 'datadog')
+      #   Dir.mkdir(out)
+      # end
 
       # TODO: hash path + content to detect changes
       datadog_gemfile  = File.join(out, 'datadog.gemfile')

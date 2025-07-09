@@ -7,6 +7,7 @@ RUNTIME = import 'runtime'
 
 class << self
   def isolate(&block)
+    # HACK: until context[:bundler] evaluation can be figured out for JRuby
     return block.call unless Process.respond_to?(:fork)
 
     PROCESS.child_eval do

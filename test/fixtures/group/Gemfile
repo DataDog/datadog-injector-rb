@@ -1,0 +1,8 @@
+source 'https://rubygems.org'
+
+gem 'rack'
+
+# dependency in group
+group :development do
+  gem 'ffi', '= 1.17.0'
+end

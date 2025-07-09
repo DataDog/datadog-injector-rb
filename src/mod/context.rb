@@ -7,10 +7,14 @@ RUNTIME = import 'runtime'
 
 class << self
   def isolate(&block)
+    # HACK: until context[:bundler] evaluation can be figured out for JRuby
     return block.call unless Process.respond_to?(:fork)
 
     PROCESS.child_eval do
       begin
+        $stdout.reopen('/dev/null', 'w')
+        $stderr.reopen('/dev/null', 'w')
+
         result = primitive(block.call)
       rescue Exception => e
         exc = StandardError.new "#{e.class.name}: #{e.message}"

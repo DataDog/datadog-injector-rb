@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+gem 'rack'
+
+# conflicting dependency
+gem 'datadog-ruby_core_source', '= 3.4.0'

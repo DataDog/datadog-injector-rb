@@ -5,6 +5,7 @@ class << self
     require!
 
     {
+      :rubygems          => Gem::VERSION,
       :version           => Bundler::VERSION,
       :gemfile           => (Bundler.default_gemfile rescue nil),
       :lockfile          => (Bundler.default_lockfile rescue nil),

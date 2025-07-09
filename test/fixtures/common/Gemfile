@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+gem 'rack'
+
+# common dependency
+gem 'ffi', '= 1.17.0'

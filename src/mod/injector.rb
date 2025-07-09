@@ -35,6 +35,7 @@ module Patch
         @definition = builder.to_definition(lockfile_path, {})
 
         # aborts when gems are incompatible
+        # e.g Bundler::SolveFailure (but only for bundler >2.4.0)
         @definition.resolve_remotely!
 
         # TODO: ideally, resolve only locally to avoid hitting rubygems
@@ -43,7 +44,7 @@ module Patch
 
         append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning])) if @deps.any?
 
-        if Bundler::VERSION < '3.5.6'
+        if Gem::Requirement.new('< 2.5.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
           @definition.lock(lockfile_path)
         else
           @definition.lock
@@ -69,7 +70,7 @@ class << self
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
     # TODO: capture stdout+stderr
-    gemfile = CONTEXT.isolate do
+    gemfile, err = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
@@ -80,8 +81,13 @@ class << self
       app_lockfile = Bundler.default_lockfile
 
       # determine output paths
-      # out = File.join(app_gemfile.dirname, 'tmp', 'datadog')
       out = File.join(app_gemfile.dirname)
+
+      # TODO: this should work, unless the app's Gemfile has relative references...
+      # if File.writable?(File.join(out, 'tmp'))
+      #   out = File.join(out, 'tmp', 'datadog')
+      #   Dir.mkdir(out)
+      # end
 
       # TODO: hash path + content to detect changes
       datadog_gemfile  = File.join(out, 'datadog.gemfile')
@@ -99,18 +105,27 @@ class << self
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
       injector = Bundler::Injector.new(gems)
       injector.singleton_class.prepend(Patch::Injector)
-      added = injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
 
-      datadog_gemfile
+      begin
+        injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
+
+        [datadog_gemfile, nil]
+      rescue
+        [nil, "bundler.inject"]
+      end
     end
 
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
-    if gemfile
-      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
-      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
-      ENV['BUNDLE_GEMFILE'] = gemfile
-    end
+    return [nil, err] if err
+
+    return [false, nil] unless gemfile
+
+    Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
+    ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    ENV['BUNDLE_GEMFILE'] = gemfile
+
+    [true, nil]
   end
 
   def options_for(name)

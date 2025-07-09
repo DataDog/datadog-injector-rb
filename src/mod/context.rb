@@ -11,6 +11,9 @@ class << self
 
     PROCESS.child_eval do
       begin
+        $stdout.reopen('/dev/null', 'w')
+        $stderr.reopen('/dev/null', 'w')
+
         result = primitive(block.call)
       rescue Exception => e
         exc = StandardError.new "#{e.class.name}: #{e.message}"

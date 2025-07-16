@@ -30,7 +30,7 @@ class << self
     LOG.info { "telemetry:emit points:#{points.inspect}" }
 
     pid = opts[:pid] || PROCESS.pid # TODO: emit from isolate
-    version = opts[:version] # TODO: || TRACER.version
+    version = opts[:version] || package_version
 
     forwarder = ENV['DD_TELEMETRY_FORWARDER_PATH']
 
@@ -48,4 +48,18 @@ class << self
 
     LOG.info { "telemetry:forwarder cpid:#{cpid} status:#{status}" }
   end
+
+  # TODO: extract to a package module
+  def package_basepath
+    ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.expand_path(File.join(File.dirname(__FILE__), '..'))
+  end
+  private :package_basepath
+
+  # TODO: extract to a package module
+  def package_version
+    return unless File.exist?("#{package_basepath}/version")
+
+    File.read("#{package_basepath}/version").chomp
+  end
+  private :package_version
 end

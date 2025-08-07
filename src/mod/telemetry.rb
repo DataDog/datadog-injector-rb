@@ -10,7 +10,7 @@ class << self
     pid = args.shift
     version = args.shift
 
-    if args.length > 1
+    if args.length == 4
       result = args.shift
       result_reason = args.shift  
       result_class = args.shift

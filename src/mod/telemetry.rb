@@ -6,7 +6,22 @@ RUBY = import 'ruby'
 JSON = import 'json'
 
 class << self
-  def payload(points, pid, version, result = nil, result_reason = nil, result_class = nil)
+  def payload(*args)
+    pid = args.shift
+    version = args.shift
+
+    if args.length > 1
+      result = args.shift
+      result_reason = args.shift  
+      result_class = args.shift
+      points = args.shift
+    else
+      result = nil
+      result_reason = nil
+      result_class = nil
+      points = args.shift
+    end
+
     metadata = {
           :language_name => 'ruby',
           :language_version => RUBY.version,

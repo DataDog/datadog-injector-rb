@@ -6,20 +6,26 @@ RUBY = import 'ruby'
 JSON = import 'json'
 
 class << self
-  def payload(pid, version, result, result_reason, result_class, points)
-    JSON.dump(
-      {
-        :metadata => {
+  # TODO: this is NOT ruby 1.8 compatible
+  def payload(points, pid:, version:, result: nil, result_reason: nil, result_class: nil)
+    metadata = {
           :language_name => 'ruby',
           :language_version => RUBY.version,
           :runtime_name => RUBY.engine,
           :runtime_version => RUBY.engine_version,
           :tracer_version => version,
           :pid => pid,
-          :result => result,
-          :result_reason => result_reason, 
-          :result_class => result_class,
-        },
+        }
+
+    if result
+      metadata[:result] = result
+      metadata[:result_reason] = result_reason
+      metadata[:result_class] = result_class
+    end
+
+    JSON.dump(
+      {
+        :metadata => metadata,
         :points => points,
       }
     )

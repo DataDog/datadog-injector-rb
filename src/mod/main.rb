@@ -27,9 +27,41 @@ if (result = guard.call(context.status))
 
   tags = result.map { |r| "reason:#{r[:reason]}" }
 
+  # TODO: check logic
+  if result.size == 1
+    # report guardrail for UI consumption
+    # TODO: we pick the first one
+    user_reason = result.map { |r| r[:reason] }.compact.first
+
+    # TODO: this processing should be extracted
+    if user_reason =~ /^runtime\./
+      # Runtime version or engine is incompatible
+      user_reason_class = 'incompatible_runtime'
+    elsif user_reason =~ /^fs\./
+      # The environmetn within which the application runs has been deemed unsatisfactory
+      user_reason_class = 'incompatible_environment'
+    elsif ['rubygems.version', 'bundler_version'].include?(user_reason)
+      # The version of these components are incompatible but could be upgraded spearately of the runtime
+      user_reason_class = 'incompatible_component'
+    elsif ['bundler.unbundled'].include?(user_reason)
+      # We can't inject outside of a Bundler context
+      user_reason_class = 'unsupported_binary'
+    else
+      # Theoretically we don't reach this
+      # TODO: cover all cases that are present in guardrails
+      user_reason_class = 'unknown'
+    end
+
+  else
+    user_reason_class = 'multiple_reasons'
+  end
+
+  # TODO: map codes to user-oriented text
+  reason_text = result.map { |r| r[:reason] }.join(', ')
+
   telemetry.emit([
     { :name => 'library_entrypoint.abort', :tags => tags },
-  ], { :result => 'abort', :result_reason => 'library_entrypoint.abort', :result_class => 'internal_error' })
+  ], { :result => 'abort', :result_reason => reason_text, :result_class => user_reason_class })
 
 # stage 3: inject
 else
@@ -42,22 +74,24 @@ else
 
     telemetry.emit([
       { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
-    ], { :result => 'abort', :result_reason => 'inject:skip', :result_class => 'internal_error' })
+    ], { :result => 'success', :result_reason => 'Successfully reused previous datadog injection', :result_class => 'success_cached' })
   else
     begin
       # TODO: pass args, e.g context, location, etc...
       injected, err = injector.call
 
       if err
+        # TODO: match err to user reason class and user reason text
+        # TODO: improve reporting accuracy on the injector.call side
         telemetry.emit([
           { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
-        ], { :result => 'error', :result_reason => err.to_s, :result_class => 'internal_error' })
+        ], { :result => 'error', :result_reason => 'A dependency was found to be incompatible', :result_class => 'incompatible_dependency' })
       else
         log.info { 'inject:complete' }
 
         telemetry.emit([
           { :name => 'library_entrypoint.complete' },
-        ], { :result => 'success', :result_reason => 'Successfully configured ddtrace package', :result_class => 'success' })
+        ], { :result => 'success', :result_reason => 'Successfully configured datadog for injection', :result_class => 'success' })
       end
     rescue StandardError => _e
       log.info { 'inject:error' }

@@ -24,7 +24,7 @@ REASON_CLASS_MAP = {
   'bundler.vendored' => 'incompatible_environment'
 }
 
-def classify_user_reason(reason)
+def self.classify_user_reason(reason)
   return nil unless reason
   REASON_CLASS_MAP.each do |pattern, classification|
     return classification if pattern.is_a?(Regexp) ? reason =~ pattern : reason == pattern
@@ -50,7 +50,7 @@ if (result = guard.call(context.status))
   if result.size == 1
   # Pick the first reason for UI consumption
     user_reason = result.map { |r| r[:reason] }.compact.first
-    user_reason_class = classify_user_reason(user_reason)
+    user_reason_class = self.classify_user_reason(user_reason)
   else
     user_reason_class = 'multiple_reasons'
   end

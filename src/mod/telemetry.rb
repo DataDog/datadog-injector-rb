@@ -6,8 +6,7 @@ RUBY = import 'ruby'
 JSON = import 'json'
 
 class << self
-  # TODO: this is NOT ruby 1.8 compatible
-  def payload(points, pid:, version:, result: nil, result_reason: nil, result_class: nil)
+  def payload(points, pid, version, result = nil, result_reason = nil, result_class = nil)
     metadata = {
           :language_name => 'ruby',
           :language_version => RUBY.version,

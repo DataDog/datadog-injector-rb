@@ -80,6 +80,9 @@ SUITE = [
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unlocked',
+      'result should be abort',
+      'result class should be incompatible component',
+      'result reason should include bundler.unlocked',
     ],
   },
 
@@ -109,6 +112,9 @@ SUITE = [
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unbundled',
+      'result should be abort',
+      'result class should be unsupported binary',
+      'result reason should include bundler.unbundled',
     ],
   },
 
@@ -139,6 +145,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.deployment',
+        'result should be abort',
+        'result class should be incompatible environment',
+        'result reason should include bundler.deployment',
       ],
     },
     [{ fixture: 'frozen' }, { fixture: 'hot', env: 'BUNDLE_FROZEN=true' }] => {
@@ -167,6 +176,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.frozen',
+        'result should be abort',
+        'result class should be incompatible component',
+        'result reason should include bundler.frozen',
       ],
     },
     { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
@@ -220,6 +232,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.vendored',
+        'result should be abort',
+        'result class should be incompatible environment',
+        'result reason should include bundler.vendored',
       ],
     },
     { fixture: 'hot' } => {
@@ -275,6 +290,9 @@ SUITE = [
         'injection should succeed',
         'telemetry should include complete',
         'abort reason should be empty',
+        'result should be success',
+        'result class should be success',
+        'result reason should include successful injection',
       ],
     },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
@@ -296,6 +314,9 @@ SUITE = [
         'new gemfile should include datadog',
         'new lockfile should include datadog',
         'gem datadog should have require option',
+        'result should be success',
+        'result class should be success',
+        'result reason should include successful injection',
       ],
     },
     { inject: true, injector: 'datadog', packaged: true } => {
@@ -319,12 +340,17 @@ SUITE = [
           'new lockfile should include datadog',
           'gem datadog should have require option',
           'gem ffi should have version from app',
+          'result should be success',
+          'result class should be success',
+          'result reason should include successful injection',
         ],
         { fixture: 'conflict' } => [
           'telemetry should include error',
           'error reason should include bundler.inject',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
+          'result should be error',
+          'result class should be incompatible dependency',
         # TODO: disabled due to race condition on naive deletion
         # 'new gemfile should not exist',
         # 'new lockfile should not exist',
@@ -339,6 +365,9 @@ SUITE = [
           'new lockfile should include datadog',
           'gem datadog should have require option',
           'gem ffi should have version from app',
+          'result should be success',
+          'result class should be success',
+          'result reason should include successful injection',
         ]
       }
     }
@@ -494,6 +523,98 @@ end
 example 'new lockfile should not exist' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   !File.exist?(lockfile)
+end
+
+example 'result should be abort' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result'] == 'abort' }
+end
+
+example 'result should be success' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result'] == 'success' }
+end
+
+example 'result should be error' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result'] == 'error' }
+end
+
+example 'result class should be incompatible runtime' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'incompatible_runtime' }
+end
+
+example 'result class should be incompatible environment' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'incompatible_environment' }
+end
+
+example 'result class should be incompatible component' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'incompatible_component' }
+end
+
+example 'result class should be unsupported binary' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'unsupported_binary' }
+end
+
+example 'result class should be multiple reasons' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'multiple_reasons' }
+end
+
+example 'result class should be success' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'success' }
+end
+
+example 'result class should be success cached' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'success_cached' }
+end
+
+example 'result class should be internal error' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'internal_error' }
+end
+
+example 'result class should be incompatible dependency' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_class'] == 'incompatible_dependency' }
+end
+
+example 'result reason should include bundler.unlocked' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('bundler.unlocked') }
+end
+
+example 'result reason should include bundler.deployment' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('bundler.deployment') }
+end
+
+example 'result reason should include bundler.frozen' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('bundler.frozen') }
+end
+
+example 'result reason should include bundler.unbundled' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('bundler.unbundled') }
+end
+
+example 'result reason should include runtime.version' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('runtime.version') }
+end
+
+example 'result reason should include runtime.parser' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('runtime.parser') }
+end
+
+example 'result reason should include runtime.engine' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('runtime.engine') }
+end
+
+example 'result reason should include bundler.vendored' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('bundler.vendored') }
+end
+
+example 'result reason should include runtime.forkless' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('runtime.forkless') }
+end
+
+example 'result reason should include successful injection' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('Successfully configured datadog for injection') }
+end
+
+example 'result reason should include successful reuse' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('Successfully reused previous datadog injection') }
 end
 
 RUNTIMES = {

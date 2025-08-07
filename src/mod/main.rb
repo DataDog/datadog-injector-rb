@@ -12,6 +12,26 @@ telemetry.emit([{ :name => 'library_entrypoint.start' }])
 
 log = import 'log'
 
+REASON_CLASS_MAP = {
+  /^runtime\./ => 'incompatible_runtime',
+  /^fs\./ => 'incompatible_environment',
+  'rubygems.version' => 'incompatible_component',
+  'bundler.version' => 'incompatible_component',
+  'bundler.unbundled' => 'unsupported_binary',
+  'bundler.unlocked' => 'incompatible_component',
+  'bundler.frozen' => 'incompatible_component',
+  'bundler.deployment' => 'incompatible_environment',
+  'bundler.vendored' => 'incompatible_environment'
+}
+
+def classify_user_reason(reason)
+  return nil unless reason
+  REASON_CLASS_MAP.each do |pattern, classification|
+    return classification if pattern.is_a?(Regexp) ? reason =~ pattern : reason == pattern
+  end
+  'unknown'
+end
+
 # TODO: config
 
 # stage 1: gather context
@@ -27,31 +47,10 @@ if (result = guard.call(context.status))
 
   tags = result.map { |r| "reason:#{r[:reason]}" }
 
-  # TODO: check logic
   if result.size == 1
-    # report guardrail for UI consumption
-    # TODO: we pick the first one
+  # Pick the first reason for UI consumption
     user_reason = result.map { |r| r[:reason] }.compact.first
-
-    # TODO: this processing should be extracted
-    if user_reason =~ /^runtime\./
-      # Runtime version or engine is incompatible
-      user_reason_class = 'incompatible_runtime'
-    elsif user_reason =~ /^fs\./
-      # The environmetn within which the application runs has been deemed unsatisfactory
-      user_reason_class = 'incompatible_environment'
-    elsif ['rubygems.version', 'bundler_version'].include?(user_reason)
-      # The version of these components are incompatible but could be upgraded spearately of the runtime
-      user_reason_class = 'incompatible_component'
-    elsif ['bundler.unbundled'].include?(user_reason)
-      # We can't inject outside of a Bundler context
-      user_reason_class = 'unsupported_binary'
-    else
-      # Theoretically we don't reach this
-      # TODO: cover all cases that are present in guardrails
-      user_reason_class = 'unknown'
-    end
-
+    user_reason_class = classify_user_reason(user_reason)
   else
     user_reason_class = 'multiple_reasons'
   end

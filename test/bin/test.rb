@@ -79,7 +79,7 @@ SUITE = [
       'injection should abort',
       'abort reason should include bundler.unlocked',
       'result should be abort',
-      'result class should be multiple reasons',
+      'result class should be incompatible component',
       'result reason should include bundler.unlocked',
     ],
   },
@@ -140,7 +140,7 @@ SUITE = [
         'injection should abort',
         'abort reason should include bundler.deployment',
         'result should be abort',
-        'result class should be incompatible environment',
+        'result class should be multiple reasons',
         'result reason should include bundler.deployment',
       ],
     },
@@ -223,7 +223,7 @@ SUITE = [
         'injection should abort',
         'abort reason should include bundler.vendored',
         'result should be abort',
-        'result class should be incompatible environment',
+        'result class should be multiple reasons',
         'result reason should include bundler.vendored',
       ],
     },
@@ -279,8 +279,8 @@ SUITE = [
         'telemetry should include complete',
         'abort reason should be empty',
         'result should be success',
-        'result class should be success',
-        'result reason should include successful injection',
+        'result class should be success cached',
+        'result reason should include reused injection',
       ],
     },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
@@ -581,6 +581,10 @@ end
 
 example 'result reason should include successful injection' do |context|
   context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('Successfully configured datadog for injection') }
+end
+
+example 'result reason should include reused injection' do |context|
+  context.telemetry.any? { |e| e['metadata'] && e['metadata']['result_reason'] && e['metadata']['result_reason'].include?('Successfully reused previous datadog injection') }
 end
 
 example 'result reason should include successful reuse' do |context|

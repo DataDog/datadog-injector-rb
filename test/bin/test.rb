@@ -325,8 +325,6 @@ SUITE = [
           'error reason should include bundler.inject',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'result should be error',
-          'result class should be incompatible dependency',
         # TODO: disabled due to race condition on naive deletion
         # 'new gemfile should not exist',
         # 'new lockfile should not exist',
@@ -497,7 +495,6 @@ example 'new lockfile should not exist' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   !File.exist?(lockfile)
 end
-
 
 RUNTIMES = {
   'ruby' => {

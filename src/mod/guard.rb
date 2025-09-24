@@ -24,7 +24,7 @@ class << self
       result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
     end
 
-    if lower(status[:bundler][:version], 2, 3, 26)
+    if lower(status[:bundler][:version], 2, 4, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version' }
     end
 

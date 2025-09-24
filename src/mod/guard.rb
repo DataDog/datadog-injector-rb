@@ -28,6 +28,14 @@ class << self
       result << { :name => 'bundler.version', :reason => 'bundler.version' }
     end
 
+    if min(status[:bundler][:rubygems], 4, 0, 0)
+      result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
+    end
+
+    if min(status[:bundler][:version], 4, 0, 0)
+      result << { :name => 'bundler.version', :reason => 'bundler.version' }
+    end
+
     if !status[:bundler][:bundled]
       result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
     end
@@ -61,6 +69,16 @@ class << self
     return true if act_maj < exp_maj
     return true if act_maj == exp_maj && act_min < exp_min
     return true if act_maj == exp_maj && act_min == exp_min && act_patch < exp_patch
+
+    false
+  end
+
+  def min(str, exp_maj, exp_min, exp_patch)
+    act_maj, act_min, act_patch = str.split('.').take(3).map(&:to_i)
+
+    return true if act_maj >= exp_maj
+    return true if act_maj == exp_maj && act_min >= exp_min
+    return true if act_maj == exp_maj && act_min == exp_min && act_patch >= exp_patch
 
     false
   end

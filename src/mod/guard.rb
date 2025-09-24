@@ -20,7 +20,7 @@ class << self
       result << { :name => 'runtime.fork', :reason => 'runtime.forkless' }
     end
 
-    if lower(status[:bundler][:rubygems], 3, 0, 0)
+    if lower(status[:bundler][:rubygems], 3, 4, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
     end
 

@@ -36,6 +36,10 @@ class << self
       result << { :name => 'bundler.version', :reason => 'bundler.version' }
     end
 
+    if min(status[:bundler][:simulate_version], 4, 0, 0)
+      result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated' }
+    end
+
     if !status[:bundler][:bundled]
       result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
     end
@@ -64,7 +68,11 @@ class << self
   end
 
   def lower(str, exp_maj, exp_min, exp_patch)
-    act_maj, act_min, act_patch = str.split('.').take(3).map(&:to_i)
+    act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
+
+    act_maj   ||= 0
+    act_min   ||= 0
+    act_patch ||= 0
 
     return true if act_maj < exp_maj
     return true if act_maj == exp_maj && act_min < exp_min
@@ -74,7 +82,11 @@ class << self
   end
 
   def min(str, exp_maj, exp_min, exp_patch)
-    act_maj, act_min, act_patch = str.split('.').take(3).map(&:to_i)
+    act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
+
+    act_maj   ||= 0
+    act_min   ||= 0
+    act_patch ||= 0
 
     return true if act_maj >= exp_maj
     return true if act_maj == exp_maj && act_min >= exp_min

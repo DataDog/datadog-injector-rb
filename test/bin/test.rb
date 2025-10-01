@@ -454,7 +454,7 @@ end
 
 example 'gem datadog should have require option' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{:require => "datadog/single_step_instrument"}) rescue nil
+  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{(?::require\s*=>\s*|require:\s*)"datadog/single_step_instrument"}) rescue nil
 end
 
 example 'gem ffi should have version from app' do |context|

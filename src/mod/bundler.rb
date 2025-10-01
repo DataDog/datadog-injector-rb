@@ -7,6 +7,7 @@ class << self
     {
       :rubygems          => Gem::VERSION,
       :version           => Bundler::VERSION,
+      :simulate_version  => Bundler.settings[:simulate_version],
       :gemfile           => (Bundler.default_gemfile rescue nil),
       :lockfile          => (Bundler.default_lockfile rescue nil),
       :bundled           => Bundler::SharedHelpers.in_bundle?,

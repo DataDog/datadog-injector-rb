@@ -20,12 +20,24 @@ class << self
       result << { :name => 'runtime.fork', :reason => 'runtime.forkless' }
     end
 
-    if lower(status[:bundler][:rubygems], 3, 0, 0)
+    if lower(status[:bundler][:rubygems], 3, 4, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
     end
 
-    if lower(status[:bundler][:version], 2, 3, 26)
+    if lower(status[:bundler][:version], 2, 4, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version' }
+    end
+
+    if min(status[:bundler][:rubygems], 4, 0, 0)
+      result << { :name => 'rubygems.version', :reason => 'rubygems.version' }
+    end
+
+    if min(status[:bundler][:version], 4, 0, 0)
+      result << { :name => 'bundler.version', :reason => 'bundler.version' }
+    end
+
+    if min(status[:bundler][:simulate_version], 4, 0, 0)
+      result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated' }
     end
 
     if !status[:bundler][:bundled]
@@ -56,11 +68,29 @@ class << self
   end
 
   def lower(str, exp_maj, exp_min, exp_patch)
-    act_maj, act_min, act_patch = str.split('.').take(3).map(&:to_i)
+    act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
+
+    act_maj   ||= 0
+    act_min   ||= 0
+    act_patch ||= 0
 
     return true if act_maj < exp_maj
     return true if act_maj == exp_maj && act_min < exp_min
     return true if act_maj == exp_maj && act_min == exp_min && act_patch < exp_patch
+
+    false
+  end
+
+  def min(str, exp_maj, exp_min, exp_patch)
+    act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
+
+    act_maj   ||= 0
+    act_min   ||= 0
+    act_patch ||= 0
+
+    return true if act_maj >= exp_maj
+    return true if act_maj == exp_maj && act_min >= exp_min
+    return true if act_maj == exp_maj && act_min == exp_min && act_patch >= exp_patch
 
     false
   end

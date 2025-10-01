@@ -278,6 +278,8 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
         'gem datadog should have require option',
@@ -297,6 +299,8 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
           'new gemfile should include datadog',
           'new lockfile should include datadog',
           'gem datadog should have require option',
@@ -315,6 +319,8 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
           'new gemfile should include datadog',
           'new lockfile should include datadog',
           'gem datadog should have require option',
@@ -428,32 +434,42 @@ end
 
 example 'app gemfile should not include datadog' do |context|
   gemfile = File.join(context.path, 'Gemfile')
-  !File.read(gemfile).include?('gem "datadog"')
+  !File.read(gemfile).include?('gem "datadog"') rescue nil
 end
 
 example 'app lockfile should not include datadog' do |context|
   lockfile = File.join(context.path, 'Gemfile.lock')
-  !File.read(lockfile).include?(' datadog ')
+  !File.read(lockfile).include?(' datadog ') rescue nil
 end
 
 example 'new gemfile should include datadog' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
-  File.read(gemfile).include?('gem "datadog"')
+  File.read(gemfile).include?('gem "datadog"') rescue nil
 end
 
 example 'new lockfile should include datadog' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.read(lockfile).include?(' datadog ')
+  File.read(lockfile).include?(' datadog ') rescue nil
 end
 
 example 'gem datadog should have require option' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{:require => "datadog/single_step_instrument"})
+  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{(?::require\s*=>\s*|require:\s*)"datadog/single_step_instrument"}) rescue nil
 end
 
 example 'gem ffi should have version from app' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(gemfile).grep(/ffi/).any?(%r{1\.17\.0})
+  File.readlines(gemfile).grep(/ffi/).any?(%r{1\.17\.0}) rescue nil
+end
+
+example 'new gemfile should exist' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.exist?(gemfile)
+end
+
+example 'new lockfile should exist' do |context|
+  lockfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.exist?(lockfile)
 end
 
 example 'new gemfile should not exist' do |context|

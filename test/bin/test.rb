@@ -75,6 +75,7 @@ SUITE = [
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
+      { engine: 'jruby', version: '10.0' },
     ] => [
       'telemetry should include start',
       'injection should abort',
@@ -103,6 +104,7 @@ SUITE = [
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
+      { engine: 'jruby', version: '10.0' },
     ] => [
       'telemetry should include start',
       'injection should abort',
@@ -132,6 +134,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -159,6 +162,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -196,6 +200,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -248,6 +253,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -513,6 +519,7 @@ RUNTIMES = {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
     '9.3' => { tag: '9.3-gnu', arch: ['aarch64', 'x86_64'] },
     '9.4' => { tag: '9.4-gnu', arch: ['aarch64', 'x86_64'] },
+    '10.0' => { tag: '10.0-gnu', arch: ['aarch64', 'x86_64'] },
   }
 }
 

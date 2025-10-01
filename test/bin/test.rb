@@ -71,6 +71,7 @@ SUITE = [
       { engine: 'ruby', version: '3.2' },
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
+      { engine: 'ruby', version: '3.5' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -98,6 +99,7 @@ SUITE = [
       { engine: 'ruby', version: '3.2' },
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
+      { engine: 'ruby', version: '3.5' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -126,6 +128,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
@@ -152,6 +155,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
@@ -206,6 +210,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -257,6 +262,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should proceed',
@@ -274,6 +280,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -294,6 +301,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => {
         { fixture: 'common' } => [
           'telemetry should include complete',
@@ -499,6 +507,7 @@ RUNTIMES = {
     '3.2' => { tag: '3.2-centos', arch: ['aarch64', 'x86_64'] },
     '3.3' => { tag: '3.3-centos', arch: ['aarch64', 'x86_64'] },
     '3.4' => { tag: '3.4-centos', arch: ['aarch64', 'x86_64'] },
+    '3.5' => { tag: '3.5-centos', arch: ['aarch64', 'x86_64'] },
   },
   'jruby' => {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },

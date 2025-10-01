@@ -71,9 +71,11 @@ SUITE = [
       { engine: 'ruby', version: '3.2' },
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
+      { engine: 'ruby', version: '3.5' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
+      { engine: 'jruby', version: '10.0' },
     ] => [
       'telemetry should include start',
       'injection should abort',
@@ -98,9 +100,11 @@ SUITE = [
       { engine: 'ruby', version: '3.2' },
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
+      { engine: 'ruby', version: '3.5' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
+      { engine: 'jruby', version: '10.0' },
     ] => [
       'telemetry should include start',
       'injection should abort',
@@ -126,9 +130,11 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -152,9 +158,11 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -192,6 +200,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -206,6 +215,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -243,6 +253,7 @@ SUITE = [
         { engine: 'jruby', version: '9.2' },
         { engine: 'jruby', version: '9.3' },
         { engine: 'jruby', version: '9.4' },
+        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -257,6 +268,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should proceed',
@@ -274,6 +286,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -294,6 +307,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => {
         { fixture: 'common' } => [
           'telemetry should include complete',
@@ -499,11 +513,13 @@ RUNTIMES = {
     '3.2' => { tag: '3.2-centos', arch: ['aarch64', 'x86_64'] },
     '3.3' => { tag: '3.3-centos', arch: ['aarch64', 'x86_64'] },
     '3.4' => { tag: '3.4-centos', arch: ['aarch64', 'x86_64'] },
+    '3.5' => { tag: '3.5-centos', arch: ['aarch64', 'x86_64'] },
   },
   'jruby' => {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
     '9.3' => { tag: '9.3-gnu', arch: ['aarch64', 'x86_64'] },
     '9.4' => { tag: '9.4-gnu', arch: ['aarch64', 'x86_64'] },
+    '10.0' => { tag: '10.0-gnu', arch: ['aarch64', 'x86_64'] },
   }
 }
 
@@ -581,7 +597,25 @@ class Context
 end
 
 def main(argv)
-  keep = false # TODO: handle from command line
+  keep = false
+  filter = []
+
+  loop do
+    arg = argv.shift
+
+    case arg
+    when '-k', '--keep'
+      keep = true
+    when '-f', '--filter'
+      f = argv.shift
+      raise ArgumentError if f.nil?
+      filter << f
+    when nil
+      break
+    else
+      next
+    end
+  end
 
   err = []
   miss = []
@@ -597,16 +631,9 @@ def main(argv)
 
   rows = matrix.uniq
 
-# TODO: these should be possible to filter straight from the command line
-# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '1.8' && ['hot', 'deployment', 'frozen'].include?(e[:fixture]) }
-# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '1.8' }
-# rows = matrix.select { |e| e[:engine] == 'ruby' && e[:version] == '3.4' && e[:bundle] == 'locked' }
-# rows = matrix.uniq.select { |row| row[:engine] == RUBY_ENGINE && row[:version] == (RUBY_VERSION =~ /^(\d+\.\d+)/ && $1) }
-# rows = matrix.uniq.select { |row| row[:engine] == 'ruby' }
-# rows = matrix.uniq.select { |row| row[:engine] == 'ruby' && row[:version] == '3.4' && row[:fixture] == 'hot' }
-# rows = matrix.uniq.select { |row| row[:engine] == 'jruby' && row[:version] == '9.2' && row[:fixture] == 'hot' }
-# rows = matrix.uniq.select { |row| row[:engine] == 'jruby' }
-# rows = matrix.uniq.select { |row| row == {bundle: "locked", fixture: "deployment", engine: "jruby", version: "9.2", test: "injection should abort"} }
+  filter.each do |f|
+    rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == v }.reduce(:&) }
+  end
 
   require 'fileutils'
   require 'securerandom'
@@ -738,4 +765,4 @@ def main(argv)
   exit 1 if fail.count + miss.count + err.count > 0
 end
 
-main(ARGV) if $0 == __FILE__
+main(ARGV.dup) if $0 == __FILE__

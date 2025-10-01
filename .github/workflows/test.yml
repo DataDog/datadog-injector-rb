@@ -20,13 +20,81 @@ jobs:
         platform:
           - os: linux
             cpu: x86_64
+            libc: gnu
             base: ubuntu-24.04
-        # TODO: arm not available for private repos; enable when going public
-        # - os: linux
-        #   cpu: aarch64
-        #   base: ubuntu-24.04-arm
+          - os: linux
+            cpu: aarch64
+            libc: gnu
+            base: ubuntu-24.04-arm
+        ruby:
+          - engine: ruby
+            version: '1.8'
+          - engine: ruby
+            version: '1.9'
+          - engine: ruby
+            version: '2.0'
+          - engine: ruby
+            version: '2.1'
+          - engine: ruby
+            version: '2.2'
+          - engine: ruby
+            version: '2.3'
+          - engine: ruby
+            version: '2.4'
+          - engine: ruby
+            version: '2.5'
+          - engine: ruby
+            version: '2.6'
+          - engine: ruby
+            version: '2.7'
+          - engine: ruby
+            version: '3.0'
+          - engine: ruby
+            version: '3.1'
+          - engine: ruby
+            version: '3.2'
+          - engine: ruby
+            version: '3.3'
+          - engine: ruby
+            version: '3.4'
+          - engine: ruby
+            version: '3.5'
+          - engine: jruby
+            version: '9.2'
+          - engine: jruby
+            version: '9.3'
+          - engine: jruby
+            version: '9.4'
+          - engine: jruby
+            version: '10.0'
+        exclude:
+          - ruby:
+              engine: ruby
+              version: 1.8
+            platform:
+              cpu: aarch64
+              libc: gnu
+          - ruby:
+              engine: ruby
+              version: 1.9
+            platform:
+              cpu: aarch64
+              libc: gnu
+          - ruby:
+              engine: ruby
+              version: 2.0
+            platform:
+              cpu: aarch64
+              libc: gnu
+          - ruby:
+              engine: ruby
+              version: 2.1
+            platform:
+              cpu: aarch64
+              libc: gnu
 
     runs-on: ${{ matrix.platform.base }}
+    name: Test (${{ matrix.ruby.engine }}-${{ matrix.ruby.version }}, ${{ matrix.platform.cpu }}-${{ matrix.platform.os }}-${{ matrix.platform.libc }})
 
     steps:
       - name: Check CPU arch
@@ -50,6 +118,6 @@ jobs:
               }
             }
       - name: Run tests
-        run: ruby test/bin/test.rb
+        run: ruby test/bin/test.rb --filter engine:${{ matrix.ruby.engine }} --filter version:${{ matrix.ruby.version }}
         env:
           DOCKER_BUILDKIT: 1

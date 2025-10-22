@@ -67,7 +67,7 @@ class << self
     result unless result.empty?
   end
 
-  def lower(str, exp_maj, exp_min, exp_patch)
+  def lower(str, exp_maj, exp_min=0, exp_patch=0)
     act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
 
     act_maj   ||= 0
@@ -81,7 +81,7 @@ class << self
     false
   end
 
-  def min(str, exp_maj, exp_min, exp_patch)
+  def min(str, exp_maj, exp_min=0, exp_patch=0)
     act_maj, act_min, act_patch = str.to_s.split('.').take(3).map(&:to_i)
 
     act_maj   ||= 0

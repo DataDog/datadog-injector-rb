@@ -12,6 +12,10 @@ class << self
       result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 
+    if min(status[:ruby][:version], 3, 5)
+      result << { :name => 'ruby.version', :reason => 'runtime.version' }
+    end
+
     if status[:ruby][:engine] != 'ruby'
       result << { :name => 'ruby.engine', :reason => 'runtime.engine', :value => status[:ruby][:engine] }
     end

@@ -4,11 +4,11 @@ class << self
   def call(status)
     result = []
 
-    if status[:ruby][:version] < '2.4.'
+    if lower(status[:ruby][:version], 2, 4)
       result << { :name => 'ruby.version', :reason => 'runtime.parser' }
     end
 
-    if status[:ruby][:version] < '2.6.'
+    if lower(status[:ruby][:version], 2, 6)
       result << { :name => 'ruby.version', :reason => 'runtime.version' }
     end
 

@@ -46,11 +46,11 @@ class << self
     { :result => 'error', :result_reason => 'A dependency was found to be incompatible', :result_class => 'incompatible_dependency' }
   end
 
-  def raised(e)
+  def raised(exc)
     { :result => 'error', :result_reason => 'library_entrypoint.error', :result_class => 'internal_error' }
   end
 
-  def completed
+  def completed(injected)
     { :result => 'success', :result_reason => 'Successfully configured datadog for injection', :result_class => 'success' }
   end
 end

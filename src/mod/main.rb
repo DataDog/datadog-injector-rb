@@ -59,7 +59,7 @@ else
 
         telemetry.emit([
           { :name => 'library_entrypoint.complete' },
-        ], result: report.completed)
+        ], result: report.completed(injected))
       end
     rescue StandardError => e
       log.info { 'inject:error' }

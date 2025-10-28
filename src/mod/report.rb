@@ -18,12 +18,12 @@ class << self
   end
 
   def aborted(result)
-    user_reason_class = result.size == 1 ? class_of(result.first[:reason]) : 'multiple_reasons'
+    reason_class = result.size == 1 ? class_of(result.first[:reason]) : 'multiple_reasons'
 
     # TODO: map codes to user-oriented text
     reason_text = result.map { |r| r[:reason] }.join(', ')
 
-    { :result => 'abort', :result_reason => reason_text, :result_class => user_reason_class }
+    { :result => 'abort', :result_reason => reason_text, :result_class => reason_class }
   end
 
   def cached

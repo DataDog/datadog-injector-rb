@@ -84,10 +84,8 @@ class << self
 
   def errored(err)
     # TODO: improve reporting accuracy on the injector.call side
-    reason_class = class_of(err)
-    reason_text = text_for(err)
 
-    { :result => 'error', :result_reason => reason_text, :result_class => reason_class }
+    { :result => 'error', :result_reason => text_for(err), :result_class => class_of(err) }
   end
 
   def raised(exc)

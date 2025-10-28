@@ -111,7 +111,7 @@ class << self
         injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
 
         [datadog_gemfile, nil]
-      rescue
+      rescue # TODO: improve error reporting accuracy
         [nil, "bundler.inject"]
       end
     end

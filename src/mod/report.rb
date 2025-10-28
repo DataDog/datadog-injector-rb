@@ -19,8 +19,7 @@ class << self
 
   def aborted(result)
     if result.size == 1
-      # Pick the first reason for UI consumption
-      user_reason = result.map { |r| r[:reason] }.compact.first
+      user_reason = result.first[:reason]
       user_reason_class = class_of(user_reason)
     else
       user_reason_class = 'multiple_reasons'

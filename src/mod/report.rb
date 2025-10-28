@@ -1,26 +1,20 @@
 # ruby-version-min: 1.8.7
 
-REASON_CLASS_MAP = {
-  /^runtime\./ => 'incompatible_runtime',
-  /^fs\./ => 'incompatible_environment',
-  'rubygems.version' => 'incompatible_component',
-  'bundler.version' => 'incompatible_component',
-  'bundler.unbundled' => 'unsupported_binary',
-  'bundler.unlocked' => 'incompatible_component',
-  'bundler.frozen' => 'incompatible_component',
-  'bundler.deployment' => 'incompatible_environment',
-  'bundler.vendored' => 'incompatible_environment'
-}
-
 class << self
   def classify_user_reason(reason)
-    return nil unless reason
-
-    REASON_CLASS_MAP.each do |pattern, classification|
-      return classification if pattern === reason
+    case reason
+    when nil                    then nil
+    when /^runtime\./           then 'incompatible_runtime'
+    when /^fs\./                then 'incompatible_environment'
+    when 'rubygems.version'     then 'incompatible_component'
+    when 'bundler.version'      then 'incompatible_component'
+    when 'bundler.unbundled'    then 'unsupported_binary'
+    when 'bundler.unlocked'     then 'incompatible_component'
+    when 'bundler.frozen'       then 'incompatible_component'
+    when 'bundler.deployment'   then 'incompatible_environment'
+    when 'bundler.vendored'     then 'incompatible_environment'
+    else                             'unknown'
     end
-
-    'unknown'
   end
 
   def aborted(result)

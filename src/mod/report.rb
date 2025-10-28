@@ -18,12 +18,7 @@ class << self
   end
 
   def aborted(result)
-    if result.size == 1
-      user_reason = result.first[:reason]
-      user_reason_class = class_of(user_reason)
-    else
-      user_reason_class = 'multiple_reasons'
-    end
+    user_reason_class = result.size == 1 ? class_of(result.first[:reason]) : 'multiple_reasons'
 
     # TODO: map codes to user-oriented text
     reason_text = result.map { |r| r[:reason] }.join(', ')

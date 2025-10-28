@@ -3,8 +3,10 @@
 class << self
   def class_of(reason)
     case reason
+
     # safety
     when nil                    then nil
+
     # abort reasons
     when /^runtime\./           then 'incompatible_runtime'
     when /^fs\./                then 'incompatible_environment'
@@ -15,8 +17,10 @@ class << self
     when 'bundler.frozen'       then 'incompatible_component'
     when 'bundler.deployment'   then 'incompatible_environment'
     when 'bundler.vendored'     then 'incompatible_environment'
+
     # error reasons
     when 'bundler.inject'       then 'incompatible_dependency'
+
     # fallback
     else                             'unknown'
     end
@@ -24,9 +28,11 @@ class << self
 
   def text_for(reason, value=nil)
     case reason
+
     # safety
     when nil
       nil
+
     # abort reasons
     when 'runtime.parser'
       "The Ruby runtime language parser cannot parse the injected code (expected:2.4+ actual:#{value})"
@@ -54,9 +60,11 @@ class << self
       'Bundler is configured to ignore gems out of the vendored path'
     when 'fs.readonly'
       'The Gemfile directory is read-only'
+
     # error reasons
     when 'bundler.inject'
       'A dependency was found to be incompatible'
+
     # fallback
     else
       "Reason: '#{reason}'"

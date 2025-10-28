@@ -83,13 +83,11 @@ class << self
   end
 
   def errored(err)
-    # TODO: improve reporting accuracy on the injector.call side
-
     { :result => 'error', :result_reason => text_for(err), :result_class => class_of(err) }
   end
 
   def raised(exc)
-    { :result => 'error', :result_reason => 'library_entrypoint.error', :result_class => 'internal_error' }
+    { :result => 'error', :result_reason => 'An internal exception was caught during injection', :result_class => 'internal_error' }
   end
 
   def completed(injected)

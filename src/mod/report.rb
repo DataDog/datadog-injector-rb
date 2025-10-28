@@ -17,7 +17,7 @@ class << self
     return nil unless reason
 
     REASON_CLASS_MAP.each do |pattern, classification|
-      return classification if pattern.is_a?(Regexp) ? reason =~ pattern : reason == pattern
+      return classification if pattern === reason
     end
 
     'unknown'

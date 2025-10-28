@@ -35,7 +35,7 @@ class << self
     when 'runtime.engine'
       "The Ruby runtime engine (#{value}) is not compatible"
     when 'runtime.forkless'
-      "The Ruby runtime does not support forking"
+      'The Ruby runtime does not support forking'
     when 'rubygems.version'
       "The Ruby runtime 'rubygems' component version in use is too low (expected:[3.4+,<4.0] actual:#{value})"
     when 'bundler.version'
@@ -43,17 +43,17 @@ class << self
     when 'bundler.version.simulated'
       "Bundler is configured to simulate an incompatible version (expected:<4.0 actual:#{value})"
     when 'bundler.unbundled'
-      "The Ruby process is not running in a bundle (no Gemfile found)"
+      'The Ruby process is not running in a bundle (no Gemfile found)'
     when 'bundler.unlocked'
-      "The Ruby process has no dependency lock (no Gemfile.lock found)"
+      'The Ruby process has no dependency lock (no Gemfile.lock found)'
     when 'bundler.frozen'
-      "Bundler is configured to freeze the dependency bundle"
+      'Bundler is configured to freeze the dependency bundle'
     when 'bundler.deployment'
-      "Bundler is configured in strict deployment mode"
+      'Bundler is configured in strict deployment mode'
     when 'bundler.vendored'
-      "Bundler is configured to ignore gems out of the vendored path"
+      'Bundler is configured to ignore gems out of the vendored path'
     when 'fs.readonly'
-      "The Gemfile directory is read-only"
+      'The Gemfile directory is read-only'
     # error reasons
     when 'bundler.inject'
       'A dependency was found to be incompatible'

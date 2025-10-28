@@ -3,7 +3,9 @@
 class << self
   def class_of(reason)
     case reason
+    # safety
     when nil                    then nil
+    # abort reasons
     when /^runtime\./           then 'incompatible_runtime'
     when /^fs\./                then 'incompatible_environment'
     when 'rubygems.version'     then 'incompatible_component'
@@ -13,14 +15,19 @@ class << self
     when 'bundler.frozen'       then 'incompatible_component'
     when 'bundler.deployment'   then 'incompatible_environment'
     when 'bundler.vendored'     then 'incompatible_environment'
+    # error reasons
+    when 'bundler.inject'       then 'incompatible_dependency'
+    # fallback
     else                             'unknown'
     end
   end
 
-  def text_for(reason, value)
+  def text_for(reason, value=nil)
     case reason
+    # safety
     when nil
       nil
+    # abort reasons
     when 'runtime.parser'
       "The Ruby runtime language parser cannot parse the injected code (expected:2.4+ actual:#{value})"
     when 'runtime.version'
@@ -47,6 +54,10 @@ class << self
       "Bundler is configured to ignore gems out of the vendored path"
     when 'fs.readonly'
       "The Gemfile directory is read-only"
+    # error reasons
+    when 'bundler.inject'
+      'A dependency was found to be incompatible'
+    # fallback
     else
       "Reason: '#{reason}'"
     end
@@ -64,10 +75,11 @@ class << self
   end
 
   def errored(err)
-    # TODO: match err to user reason class and user reason text
     # TODO: improve reporting accuracy on the injector.call side
+    reason_class = class_of(err)
+    reason_text = text_for(err)
 
-    { :result => 'error', :result_reason => 'A dependency was found to be incompatible', :result_class => 'incompatible_dependency' }
+    { :result => 'error', :result_reason => reason_text, :result_class => reason_class }
   end
 
   def raised(exc)

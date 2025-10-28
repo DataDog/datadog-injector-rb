@@ -1,7 +1,7 @@
 # ruby-version-min: 1.8.7
 
 class << self
-  def classify_user_reason(reason)
+  def class_of(reason)
     case reason
     when nil                    then nil
     when /^runtime\./           then 'incompatible_runtime'
@@ -21,7 +21,7 @@ class << self
     if result.size == 1
       # Pick the first reason for UI consumption
       user_reason = result.map { |r| r[:reason] }.compact.first
-      user_reason_class = self.classify_user_reason(user_reason)
+      user_reason_class = class_of(user_reason)
     else
       user_reason_class = 'multiple_reasons'
     end

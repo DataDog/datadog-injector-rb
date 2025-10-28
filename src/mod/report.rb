@@ -15,20 +15,23 @@ REASON_CLASS_MAP = {
 class << self
   def classify_user_reason(reason)
     return nil unless reason
+
     REASON_CLASS_MAP.each do |pattern, classification|
       return classification if pattern.is_a?(Regexp) ? reason =~ pattern : reason == pattern
     end
+
     'unknown'
   end
 
   def aborted(result)
     if result.size == 1
-    # Pick the first reason for UI consumption
+      # Pick the first reason for UI consumption
       user_reason = result.map { |r| r[:reason] }.compact.first
       user_reason_class = self.classify_user_reason(user_reason)
     else
       user_reason_class = 'multiple_reasons'
     end
+
     # TODO: map codes to user-oriented text
     reason_text = result.map { |r| r[:reason] }.join(', ')
 

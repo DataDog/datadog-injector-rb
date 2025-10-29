@@ -121,3 +121,11 @@ jobs:
         run: ruby test/bin/test.rb --filter engine:${{ matrix.ruby.engine }} --filter version:${{ matrix.ruby.version }}
         env:
           DOCKER_BUILDKIT: 1
+
+  complete:
+    name: Test (complete)
+    runs-on: ubuntu-24.04
+    needs:
+      - test
+    steps:
+      - run: echo 'DONE!'

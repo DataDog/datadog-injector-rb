@@ -80,6 +80,9 @@ SUITE = [
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unlocked',
+      'telemetry start should not include result report',
+      'telemetry conclusion should include result report',
+      'reported result type should be abort',
     ],
   },
 
@@ -109,6 +112,9 @@ SUITE = [
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unbundled',
+      'telemetry start should not include result report',
+      'telemetry conclusion should include result report',
+      'reported result type should be abort',
     ],
   },
 
@@ -139,6 +145,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.deployment',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
     },
     [{ fixture: 'frozen' }, { fixture: 'hot', env: 'BUNDLE_FROZEN=true' }] => {
@@ -167,6 +176,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.frozen',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
     },
     { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
@@ -181,6 +193,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.parser',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'ruby', version: '1.8' },
@@ -195,6 +210,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.version',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'jruby', version: '9.2' },
@@ -206,6 +224,9 @@ SUITE = [
         'injection should abort',
         'abort reason should include runtime.engine',
         'abort reason should include runtime.forkless',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'ruby', version: '2.6' },
@@ -220,6 +241,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.vendored',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
     },
     { fixture: 'hot' } => {
@@ -234,6 +258,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.parser',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'ruby', version: '1.8' },
@@ -248,6 +275,9 @@ SUITE = [
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.version',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'jruby', version: '9.2' },
@@ -259,6 +289,9 @@ SUITE = [
         'injection should abort',
         'abort reason should include runtime.engine',
         'abort reason should include runtime.forkless',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
       ],
       [
         { engine: 'ruby', version: '2.6' },
@@ -275,6 +308,9 @@ SUITE = [
         'injection should succeed',
         'telemetry should include complete',
         'abort reason should be empty',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
       ],
     },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
@@ -296,6 +332,9 @@ SUITE = [
         'new gemfile should include datadog',
         'new lockfile should include datadog',
         'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
       ],
     },
     { inject: true, injector: 'datadog', packaged: true } => {
@@ -319,6 +358,9 @@ SUITE = [
           'new lockfile should include datadog',
           'gem datadog should have require option',
           'gem ffi should have version from app',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
         ],
         { fixture: 'conflict' } => [
           'telemetry should include error',
@@ -328,6 +370,9 @@ SUITE = [
         # TODO: disabled due to race condition on naive deletion
         # 'new gemfile should not exist',
         # 'new lockfile should not exist',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be error',
         ],
         { fixture: 'group' } => [
           'telemetry should include complete',
@@ -339,6 +384,9 @@ SUITE = [
           'new lockfile should include datadog',
           'gem datadog should have require option',
           'gem ffi should have version from app',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
         ]
       }
     }
@@ -418,6 +466,50 @@ end
 
 example 'abort reason should include runtime.forkless' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:runtime.forkless') } }
+end
+
+example 'telemetry start should not include result report' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.start' } && !e['metadata'].key?('result') }
+end
+
+example 'telemetry conclusion should include result report' do |context|
+  context.telemetry.any? { |e| e['points'].none? { |p| p['name'] == 'library_entrypoint.start' } && e['metadata'].key?('result') }
+end
+
+example 'reported result type should be success' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result'] == 'success' } }
+end
+
+example 'reported result type should be skip' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result'] == 'skip' } }
+end
+
+example 'reported result type should be abort' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result'] == 'abort' } }
+end
+
+example 'reported result type should be error' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result'] == 'error' } }
+end
+
+example 'reported result class should be success' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result_class'] == 'success' } }
+end
+
+example 'reported result class should be success_cached' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result_class'] == 'success_cached' } }
+end
+
+example 'reported result class should be incompatible_component' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result_class'] == 'incompatible_component' } }
+end
+
+example 'reported result class should be incompatible_dependency' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result_class'] == 'incompatible_dependency' } }
+end
+
+example 'reported result class should be internal_error' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| e['metadata']['result_class'] == 'internal_error' } }
 end
 
 example 'injection should proceed' do |context|

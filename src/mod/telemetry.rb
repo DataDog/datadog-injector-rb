@@ -6,17 +6,25 @@ RUBY = import 'ruby'
 JSON = import 'json'
 
 class << self
-  def payload(pid, version, points)
-    JSON.dump(
-      {
-        :metadata => {
+  def payload(pid, version, result, points)
+    metadata = {
           :language_name => 'ruby',
           :language_version => RUBY.version,
           :runtime_name => RUBY.engine,
           :runtime_version => RUBY.engine_version,
           :tracer_version => version,
           :pid => pid,
-        },
+        }
+
+    if result
+      metadata[:result] = result[:result]
+      metadata[:result_reason] = result[:result_reason]
+      metadata[:result_class] = result[:result_class]
+    end
+
+    JSON.dump(
+      {
+        :metadata => metadata,
         :points => points,
       }
     )
@@ -31,6 +39,7 @@ class << self
 
     pid = opts[:pid] || PROCESS.pid # TODO: emit from isolate
     version = opts[:version] || package_version
+    result = opts[:result]
 
     forwarder = ENV['DD_TELEMETRY_FORWARDER_PATH']
 
@@ -40,7 +49,7 @@ class << self
 
     pid = PROCESS.spawn(forwarder, 'library_entrypoint', { :in => rd, [:out, :err] => '/dev/null' })
 
-    wr.write(payload(pid, version, points))
+    wr.write(payload(pid, version, result, points))
     wr.flush
     wr.close
 

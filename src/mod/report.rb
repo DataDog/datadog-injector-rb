@@ -5,25 +5,25 @@ class << self
     case reason
 
     # safety
-    when nil                    then nil
+    when nil                             then nil
 
     # abort reasons
-    when /^runtime\./           then 'incompatible_runtime'
-    when /^fs\./                then 'incompatible_environment'
-    when 'rubygems.version'     then 'incompatible_component'
-    when 'bundler.version'      then 'incompatible_component'
-    when 'bundler.unbundled'    then 'unsupported_binary'
-    when 'bundler.unlocked'     then 'incompatible_component'
-    when 'bundler.frozen'       then 'incompatible_component'
-    when 'bundler.deployment'   then 'incompatible_environment'
-    when 'bundler.vendored'     then 'incompatible_environment'
-    when 'bundler.version.simulated' then 'incompatible_environment'
+    when /^runtime\./                    then 'incompatible_runtime'
+    when /^fs\./                         then 'incompatible_environment'
+    when 'rubygems.version'              then 'incompatible_component'
+    when 'bundler.version'               then 'incompatible_component'
+    when 'bundler.unbundled'             then 'unsupported_binary'
+    when 'bundler.unlocked'              then 'incompatible_component'
+    when 'bundler.frozen'                then 'incompatible_component'
+    when 'bundler.deployment'            then 'incompatible_environment'
+    when 'bundler.vendored'              then 'incompatible_environment'
+    when 'bundler.version.simulated'     then 'incompatible_environment'
 
     # error reasons
-    when 'bundler.inject'       then 'incompatible_dependency'
+    when 'bundler.inject'                then 'incompatible_dependency'
 
     # fallback
-    else                             'unknown'
+    else                                      'unknown'
     end
   end
 

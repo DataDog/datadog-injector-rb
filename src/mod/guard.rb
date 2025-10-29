@@ -48,10 +48,6 @@ class << self
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
-    if status[:bundler][:frozen]
-      result << { :name => 'bundler.frozen', :reason => 'bundler.frozen' }
-    end
-
     if !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
     end

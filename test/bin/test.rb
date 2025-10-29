@@ -152,14 +152,6 @@ SUITE = [
     },
     [{ fixture: 'frozen' }, { fixture: 'hot', env: 'BUNDLE_FROZEN=true' }] => {
       [
-        { engine: 'ruby', version: '1.8' },
-        { engine: 'ruby', version: '1.9' },
-        { engine: 'ruby', version: '2.0' },
-        { engine: 'ruby', version: '2.1' },
-        { engine: 'ruby', version: '2.2' },
-        { engine: 'ruby', version: '2.3' },
-        { engine: 'ruby', version: '2.4' },
-        { engine: 'ruby', version: '2.5' },
         { engine: 'ruby', version: '2.6' },
         { engine: 'ruby', version: '2.7' },
         { engine: 'ruby', version: '3.0' },
@@ -168,17 +160,15 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
-        { engine: 'jruby', version: '9.2' },
-        { engine: 'jruby', version: '9.3' },
-        { engine: 'jruby', version: '9.4' },
-        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
-        'injection should abort',
-        'abort reason should include bundler.frozen',
+        'injection should proceed',
+        'injection should succeed',
+        'telemetry should include complete',
+        'abort reason should be empty',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
-        'reported result type should be abort',
+        'reported result type should be success',
       ],
     },
     { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
@@ -313,6 +303,30 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -442,10 +456,6 @@ end
 
 example 'abort reason should include bundler.deployment' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.deployment') } }
-end
-
-example 'abort reason should include bundler.frozen' do |context|
-  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.frozen') } }
 end
 
 example 'abort reason should include bundler.unbundled' do |context|

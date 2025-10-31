@@ -84,8 +84,8 @@ class << self
     act_min   ||= 0
     act_patch ||= 0
 
-    return true if act_maj >= exp_maj
-    return true if act_maj == exp_maj && act_min >= exp_min
+    return true if act_maj > exp_maj
+    return true if act_maj == exp_maj && act_min > exp_min
     return true if act_maj == exp_maj && act_min == exp_min && act_patch >= exp_patch
 
     false

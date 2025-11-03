@@ -118,7 +118,10 @@ class << self
 
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
-    return [nil, err] if err
+    if err
+      LOG.debug { "error: #{err}"}
+      return [nil, err]
+    end
 
     return [false, nil] unless gemfile
 

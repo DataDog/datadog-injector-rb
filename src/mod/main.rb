@@ -51,6 +51,8 @@ else
       injected, err = injector.call(context.status)
 
       if err
+        log.info { "inject:error err:#{err.inspect}" }
+
         telemetry.emit([
           { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
         ], { :result => report.errored(err) })
@@ -62,7 +64,7 @@ else
         ], { :result => report.completed(injected) })
       end
     rescue StandardError => e
-      log.info { 'inject:error' }
+      log.info { "inject:fatal exc:#{e.name},#{e.message.inspect}" }
 
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },

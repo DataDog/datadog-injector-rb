@@ -849,6 +849,10 @@ def main(argv)
             end
 
           # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
+          else
+            puts "==> ERR (no forwarder log)"
+            err << row
+            next
           end
         end
       end

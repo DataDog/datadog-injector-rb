@@ -125,8 +125,15 @@ class << self
 
     return [false, nil] unless gemfile
 
-    Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
-    ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    if context[:bundler][:deployment]
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}" }
+      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+      ENV['GEM_HOME'] = "#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}"
+    else
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
+      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    end
+
     ENV['BUNDLE_GEMFILE'] = gemfile
 
     [true, nil]

@@ -33,6 +33,23 @@ class << self
     }
   end
 
+  def patch!
+    require!
+
+    mod = Module.new do
+      def [](name)
+
+        if name == :deployment
+          return false
+        end
+
+        super
+      end
+    end
+
+    ::Bundler::Settings.prepend mod
+  end
+
   private
 
   def require!

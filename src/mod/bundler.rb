@@ -48,6 +48,18 @@ class << self
     end
 
     ::Bundler::Settings.prepend mod
+
+    require 'bundler/cli/exec'
+
+    mod = Module.new do
+      def kernel_exec(*args)
+        ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r(\s*)\S+/injector\.rb)(.*)$}, '\2 \1 \3')
+
+        super
+      end
+    end
+
+    ::Bundler::CLI::Exec.prepend mod
   end
 
   private

@@ -59,8 +59,8 @@ module Patch
 end
 
 class << self
-  def call
-    LOG.info { 'injector:call' }
+  def call(context)
+    LOG.info { "injector:call context:#{context}" }
 
     # TODO: check if nested injection (maybe very early too)
     # TODO: check if injection already performed

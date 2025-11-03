@@ -48,7 +48,7 @@ else
   else
     begin
       # TODO: pass args, e.g context, location, etc...
-      injected, err = injector.call
+      injected, err = injector.call(context.status)
 
       if err
         telemetry.emit([

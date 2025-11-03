@@ -816,8 +816,9 @@ def main(argv)
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
           env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
+          env['RUBYOPT'] = "-r #{INJECTION_DIR}/src/injector.rb"
 
-          pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
+          pid = run env, *%W[ bundle exec ruby stub.rb ],
                     engine: row[:engine], version: row[:version]
           _pid, status = Process.waitpid2(pid)
           if status.exitstatus != 0

@@ -129,6 +129,8 @@ class << self
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
       ENV['GEM_HOME'] = "#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}"
+
+      BUNDLER.patch!
     else
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)

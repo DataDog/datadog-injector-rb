@@ -54,6 +54,7 @@ class << self
     mod = Module.new do
       def kernel_exec(*args)
         ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r(\s*)\S+/injector\.rb)(.*)$}, '\2 \1 \3')
+        ENV.delete('BUNDLER_SETUP')
 
         super
       end

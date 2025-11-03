@@ -40,7 +40,15 @@ else
   injector = import 'injector'
 
   if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
-    log.info { 'inject:skip' }
+    if ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH']
+      log.info { 'inject:patch' }
+
+      bundler = import 'bundler'
+
+      bundler.patch!
+    else
+      log.info { 'inject:skip' }
+    end
 
     telemetry.emit([
       { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },

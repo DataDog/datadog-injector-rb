@@ -6,6 +6,7 @@ class << self
 
     {
       :rubygems          => Gem::VERSION,
+      :gem_path          => Gem.path,
       :version           => Bundler::VERSION,
       :simulate_version  => Bundler.settings[:simulate_version],
       :gemfile           => (Bundler.default_gemfile rescue nil),
@@ -21,6 +22,8 @@ class << self
       :install_path      => (Bundler.install_path rescue nil),
       :app_config_path   => (Bundler.app_config_path rescue nil),
       :settings => {
+        :gem_home        => ENV['GEM_HOME'],
+        :gem_path        => ENV['GEM_PATH'],
         :gemfile         => Bundler.settings[:gemfile],
         :deployment      => Bundler.settings[:deployment],
         :frozen          => Bundler.settings[:frozen],

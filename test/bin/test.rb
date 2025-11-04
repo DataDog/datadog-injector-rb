@@ -816,7 +816,7 @@ def main(argv)
   rows = matrix.uniq
 
   filter.each do |f|
-    rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == v }.reduce(:&) }
+    rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == (%w[true false nil].include?(v) ? eval(v) : v) }.reduce(:&) }
   end
 
   require 'fileutils'

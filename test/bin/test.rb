@@ -893,7 +893,7 @@ def main(argv)
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
           env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless group[:inject]
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
-          env['RUBYOPT'] = "-r #{INJECTION_DIR}/src/injector.rb"
+          env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 
           pid, status = if lock
                           run env, *%W[ bundle exec ruby stub.rb ],

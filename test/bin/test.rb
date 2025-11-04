@@ -819,34 +819,36 @@ def main(argv)
     rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == (%w[true false nil].include?(v) ? eval(v) : v) }.reduce(:&) }
   end
 
+  groups = rows.group_by { |e| e.slice(*(e.keys - [:test])) }
+
   require 'fileutils'
   require 'securerandom'
   require 'json'
 
   start = Time.now
 
-  rows.each do |row|
+  groups.each do |group, rows|
     uuid = SecureRandom.uuid
-    puts "=== run: #{row.inspect} uuid: #{uuid}"
+    puts "=== run: #{group.inspect} uuid: #{uuid}"
 
-    tmp = "#{INJECTION_DIR}/test/tmp/run/#{row[:fixture]}-#{uuid}"
+    tmp = "#{INJECTION_DIR}/test/tmp/run/#{group[:fixture]}-#{uuid}"
     FileUtils.mkdir_p(tmp)
     begin
-      fixture = row[:fixture]
+      fixture = group[:fixture]
       FileUtils.cp_r "test/fixtures/#{fixture}", tmp
 
-      lock = row[:bundle] == 'locked'
-      packaged = row[:packaged]
+      lock = group[:bundle] == 'locked'
+      packaged = group[:packaged]
 
       if packaged
-        package_basepath = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
-        package_gem_home = "#{package_basepath}/#{row[:version]}.0"
+        package_basepath = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
+        package_gem_home = "#{package_basepath}/#{group[:version]}.0"
 
         env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
-        pid, status = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version], title: 'package injection gems'
+        pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'package injection gems'
         if status.exitstatus != 0
           puts "==> ERR"
-          err << row
+          err << group
           next
         end
       end
@@ -856,68 +858,73 @@ def main(argv)
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
-            pid, status = run env, *%W[ bundle lock ], engine: row[:engine], version: row[:version], title: 'lock fixture'
+            pid, status = run env, *%W[ bundle lock ], engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
               puts "==> ERR"
-              err << row
+              err << group
               next
             end
 
-            pid, status = run *%W[ bundle install ], engine: row[:engine], version: row[:version], title: 'install fixture'
+            pid, status = run *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
               puts "==> ERR"
-              err << row
+              err << group
               next
             end
           end
 
-          env = if (e = row[:env])
+          env = if (e = group[:env])
                   k, v = e.split('=', 2)
                   { k => v }
                 else
                   {}
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
-          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
-          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
+          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless group[:inject]
+          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
           env['RUBYOPT'] = "-r #{INJECTION_DIR}/src/injector.rb"
 
           pid, status = run env, *%W[ bundle exec ruby stub.rb ],
         # pid, status = run env, *%W[ ruby stub.rb ],
         # pid, status = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
-                        engine: row[:engine], version: row[:version],
+                        engine: group[:engine], version: group[:version],
                         title: 'run fixture stub'
           if status.exitstatus != 0
             puts "==> ERR"
-            err << row
+            err << group
             next
           end
 
           if File.exist? "#{tmp}/forwarder.log"
-            test = EXAMPLES[row[:test]]
             telemetry = File.open("#{tmp}/forwarder.log") { |f| f.each_line.map { |l| JSON.parse(l) } }
 
-            context = Context.new(
-              telemetry: telemetry,
-              path: Dir.pwd,
+            rows.each do |row|
+              puts "==? test: #{group.inspect} uuid: #{uuid}"
 
-              # TODO: add stdout+stderr
-            )
+              test = EXAMPLES[row[:test]]
 
-            if test.nil?
-              puts "==> MISS"
-              miss << row[:test]
-            elsif test.call(context)
-              puts "==> OK"
-            else
-              puts "==> FAIL"
-              fail << row
+              context = Context.new(
+                telemetry: telemetry,
+                path: Dir.pwd,
+
+                # TODO: add stdout+stderr
+              )
+
+              if test.nil?
+                puts "==> MISS"
+                miss << row[:test]
+              elsif test.call(context)
+                puts "==> OK"
+              else
+                puts "==> FAIL"
+                fail << row
+              end
             end
 
           # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
           else
             puts "==> ERR (no forwarder log)"
-            err << row
+            err << group
             next
           end
         end

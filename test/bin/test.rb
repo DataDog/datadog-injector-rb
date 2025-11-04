@@ -756,8 +756,6 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil)
     $stdout.write("┣━ \n")
   end
 
-# pid = spawn(env, *cmd, [:out, :err] => '/dev/null')
-# pid = spawn(env, *cmd)
   pid = spawn(env, *cmd, :out => out_w, :err => err_w)
 
   _pid, status = Process.waitpid2(pid)
@@ -808,10 +806,6 @@ def main(argv)
   matrix = flatten(SUITE)
 
   # TODO: matrix should be NOOP-explorable from the command line
-  # pp matrix
-  # p matrix.count
-  # p matrix.uniq.count
-  # pp matrix.group_by { |e| [e[:engine], e[:version]] }
 
   rows = matrix.uniq
 
@@ -949,7 +943,6 @@ def main(argv)
             end
             puts "╰─────┈┄╌"
 
-          # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
           else
             puts "╭─────┈┄╌"
             puts "│ ERR: #{group.inspect} uuid: #{uuid} forwarder: 'no log'"

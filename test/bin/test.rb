@@ -758,8 +758,10 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil)
 
   pid = spawn(env, *cmd, :out => out_w, :err => err_w)
 
-  _pid, status = Process.waitpid2(pid)
-
+  _pid, status = Process.waitpid2(pid).tap do
+    out_w.close
+    err_w.close
+  end
 ensure
   $stdout.write("┗━ ")
   if status
@@ -767,6 +769,9 @@ ensure
   else
     $stdout.write("#{status}\n")
   end
+
+  out_thr.join
+  err_thr.join
 end
 
 class Context

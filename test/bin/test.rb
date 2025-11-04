@@ -895,11 +895,16 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
           env['RUBYOPT'] = "-r #{INJECTION_DIR}/src/injector.rb"
 
-          pid, status = run env, *%W[ bundle exec ruby stub.rb ],
-        # pid, status = run env, *%W[ ruby stub.rb ],
-        # pid, status = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
-                        engine: group[:engine], version: group[:version],
-                        title: 'run fixture stub'
+          pid, status = if lock
+                          run env, *%W[ bundle exec ruby stub.rb ],
+                              engine: group[:engine], version: group[:version],
+                              title: 'run fixture stub'
+                        else
+                          run env, *%W[ ruby stub.rb ],
+                              engine: group[:engine], version: group[:version],
+                              title: 'run fixture stub'
+                        end
+
           if status.exitstatus != 0
             puts "╭─────┈┄╌"
             puts "│ ERR: #{group.inspect} uuid: #{uuid}"

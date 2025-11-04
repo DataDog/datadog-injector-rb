@@ -929,7 +929,18 @@ def main(argv)
               if test.nil?
                 puts "| ╰── MISS"
                 miss << row[:test]
-              elsif test.call(context)
+                next
+              end
+
+              res = begin
+                test.call(context)
+              rescue StandardError => e
+                puts "| ╰── ERR: #{e.class.name}(#{e.message.inspect})"
+                err << row
+                next
+              end
+
+              if res
                 puts "| ╰── OK"
               else
                 puts "| ╰── FAIL"

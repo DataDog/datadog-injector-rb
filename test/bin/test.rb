@@ -656,7 +656,7 @@ def resolve_arch(runtime_arches)
   arches_for_platform.find { |arch| runtime_arches.include?(arch) }
 end
 
-def run(*args, engine: nil, version: nil, arch: nil)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -700,8 +700,75 @@ def run(*args, engine: nil, version: nil, arch: nil)
 
   cmd += args
 
-# spawn(env, *cmd, [:out, :err] => '/dev/null')
-  spawn(env, *cmd)
+  out_r, out_w = IO.pipe
+  err_r, err_w = IO.pipe
+
+  out_thr = Thread.new do
+    mark = true
+
+    loop do
+      io = out_r
+
+      if io.eof?
+        break
+      end
+
+      data = io.read(1)
+
+      if mark
+        $stderr.write("┃ ")
+        mark = false
+      end
+
+      $stderr.write(data)
+
+      mark = true if data == "\n"
+    end
+  end
+
+  err_thr = Thread.new do
+    mark = true
+
+    loop do
+      io = err_r
+
+      if io.eof?
+        break
+      end
+
+      data = io.read(1)
+
+      if mark
+        $stderr.write("┇ ")
+        mark = false
+      end
+
+      $stderr.write(data)
+
+      mark = true if data == "\n"
+    end
+  end
+
+  $stdout.write("┏━ #{title || cmd.first}\n")
+
+  if false
+    $stdout.write("┋ #{cmd.inspect}\n")
+    $stdout.write("┣━ \n")
+  end
+
+# pid = spawn(env, *cmd, [:out, :err] => '/dev/null')
+# pid = spawn(env, *cmd)
+  pid = spawn(env, *cmd, :out => out_w, :err => err_w)
+
+  _pid, status = Process.waitpid2(pid)
+
+ensure
+  $stdout.write("┗━ ")
+  if status
+    $stdout.write("#{status}\n")
+  else
+    $stdout.write("#{status}\n")
+  end
 end
 
 class Context
@@ -776,8 +843,7 @@ def main(argv)
         package_gem_home = "#{package_basepath}/#{row[:version]}.0"
 
         env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
-        pid = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version]
-        _pid, status = Process.waitpid2(pid)
+        pid, status = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version], title: 'package injection gems'
         if status.exitstatus != 0
           puts "==> ERR"
           err << row
@@ -790,16 +856,14 @@ def main(argv)
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
-            pid = run env, *%W[ bundle lock ], engine: row[:engine], version: row[:version]
-            _pid, status = Process.waitpid2(pid)
+            pid, status = run env, *%W[ bundle lock ], engine: row[:engine], version: row[:version], title: 'lock fixture'
             if status.exitstatus != 0
               puts "==> ERR"
               err << row
               next
             end
 
-            pid = run *%W[ bundle install ], engine: row[:engine], version: row[:version]
-            _pid, status = Process.waitpid2(pid)
+            pid, status = run *%W[ bundle install ], engine: row[:engine], version: row[:version], title: 'install fixture'
             if status.exitstatus != 0
               puts "==> ERR"
               err << row
@@ -818,9 +882,11 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
           env['RUBYOPT'] = "-r #{INJECTION_DIR}/src/injector.rb"
 
-          pid = run env, *%W[ bundle exec ruby stub.rb ],
-                    engine: row[:engine], version: row[:version]
-          _pid, status = Process.waitpid2(pid)
+          pid, status = run env, *%W[ bundle exec ruby stub.rb ],
+        # pid, status = run env, *%W[ ruby stub.rb ],
+        # pid, status = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
+                        engine: row[:engine], version: row[:version],
+                        title: 'run fixture stub'
           if status.exitstatus != 0
             puts "==> ERR"
             err << row

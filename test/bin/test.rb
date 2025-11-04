@@ -829,7 +829,10 @@ def main(argv)
 
   groups.each do |group, rows|
     uuid = SecureRandom.uuid
-    puts "=== run: #{group.inspect} uuid: #{uuid}"
+
+    puts "╭─────┈┄╌"
+    puts "│ run: #{group.inspect} uuid: #{uuid}"
+    puts "╰─────┈┄╌"
 
     tmp = "#{INJECTION_DIR}/test/tmp/run/#{group[:fixture]}-#{uuid}"
     FileUtils.mkdir_p(tmp)
@@ -847,7 +850,10 @@ def main(argv)
         env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
         pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'package injection gems'
         if status.exitstatus != 0
-          puts "==> ERR"
+          puts "╭─────┈┄╌"
+          puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+          puts "╰─────┈┄╌"
+
           err << group
           next
         end
@@ -860,14 +866,20 @@ def main(argv)
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
             pid, status = run env, *%W[ bundle lock ], engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
-              puts "==> ERR"
+              puts "╭─────┈┄╌"
+              puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+              puts "╰─────┈┄╌"
+
               err << group
               next
             end
 
             pid, status = run *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
-              puts "==> ERR"
+              puts "╭─────┈┄╌"
+              puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+              puts "╰─────┈┄╌"
+
               err << group
               next
             end
@@ -890,7 +902,10 @@ def main(argv)
                         engine: group[:engine], version: group[:version],
                         title: 'run fixture stub'
           if status.exitstatus != 0
-            puts "==> ERR"
+            puts "╭─────┈┄╌"
+            puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+            puts "╰─────┈┄╌"
+
             err << group
             next
           end
@@ -898,8 +913,9 @@ def main(argv)
           if File.exist? "#{tmp}/forwarder.log"
             telemetry = File.open("#{tmp}/forwarder.log") { |f| f.each_line.map { |l| JSON.parse(l) } }
 
+            puts "╭─────┈┄╌"
             rows.each do |row|
-              puts "==? test: #{group.inspect} uuid: #{uuid}"
+              puts "│ test: #{row[:test].inspect}"
 
               test = EXAMPLES[row[:test]]
 
@@ -911,19 +927,23 @@ def main(argv)
               )
 
               if test.nil?
-                puts "==> MISS"
+                puts "| ╰── MISS"
                 miss << row[:test]
               elsif test.call(context)
-                puts "==> OK"
+                puts "| ╰── OK"
               else
-                puts "==> FAIL"
+                puts "| ╰── FAIL"
                 fail << row
               end
             end
+            puts "╰─────┈┄╌"
 
           # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
           else
-            puts "==> ERR (no forwarder log)"
+            puts "╭─────┈┄╌"
+            puts "│ ERR: #{group.inspect} uuid: #{uuid} forwarder: 'no log'"
+            puts "╰─────┈┄╌"
+
             err << group
             next
           end

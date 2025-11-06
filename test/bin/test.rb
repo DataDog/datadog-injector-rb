@@ -873,7 +873,13 @@ def main(argv)
               next
             end
 
-            pid, status = run *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
+            env = if (e = group[:env])
+                    k, v = e.split('=', 2)
+                    { k => v }
+                  else
+                    {}
+                  end
+            pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
               puts "│ ERR: #{group.inspect} uuid: #{uuid}"

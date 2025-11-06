@@ -21,9 +21,7 @@ def self.platform
 end
 
 def self.api_version
-  # TODO: handle '+0' suffix appearing in preview versions
+  require 'rbconfig' unless defined?(RbConfig)
 
-  major, minor, = RUBY_VERSION.split('.')
-
-  "#{major}.#{minor}.0"
+  RbConfig::CONFIG['ruby_version']
 end

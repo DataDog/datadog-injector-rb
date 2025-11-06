@@ -25,6 +25,7 @@ PLATFORMS
 DEPENDENCIES
   datadog
   ffi (= 1.16.3)
+  logger
 
 BUNDLED WITH
    2.7.2

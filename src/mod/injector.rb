@@ -76,13 +76,12 @@ class << self
 
       BUNDLER.send(:require!)
 
-      # TODO: these are in context
       # pinpoint app gemfile and lockfile
-      app_gemfile  = Bundler.default_gemfile
-      app_lockfile = Bundler.default_lockfile
+      app_gemfile  = context[:bundler][:gemfile]
+      app_lockfile = context[:bundler][:lockfile]
 
       # determine output paths
-      out = File.join(app_gemfile.dirname)
+      out = File.dirname(app_gemfile)
 
       # TODO: this should work, unless the app's Gemfile has relative references...
       # if File.writable?(File.join(out, 'tmp'))

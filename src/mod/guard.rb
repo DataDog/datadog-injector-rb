@@ -48,6 +48,10 @@ class << self
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
+    if status[:bundler][:settings][:path]
+      result << { :name => 'bundler.path', :reason => 'bundler.vendored' }
+    end
+
     if !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
     end

@@ -911,10 +911,11 @@ def main(argv)
       packaged = group[:packaged]
 
       if packaged
+        # TODO: reorganise package tree to remove `+0`
         package_basepath = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
-        package_gem_home = "#{package_basepath}/#{group[:version]}.0"
+        package_gem_home = "#{package_basepath}/ruby/#{group[:version]}.0" + (group[:version] == '3.5' ? '+0' : '')
 
-        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
+        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home, 'BUNDLE_PATH' => package_basepath, 'BUNDLE_APP_CONFIG' => '/nowhere' }
         pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'package injection gems'
         if status.exitstatus != 0
           puts "╭─────┈┄╌"

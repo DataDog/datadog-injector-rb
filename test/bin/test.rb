@@ -761,6 +761,8 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil)
 
     cmd += env.keys.map { |e| %W[ --env #{e} ] }.flatten
 
+    cmd += %W[ --env DD_INTERNAL_RUBY_INJECTOR_LOG_LEVEL ]
+
     cmd += %W[
       ghcr.io/datadog/images-rb/engines/#{engine}:#{tag}
     ]

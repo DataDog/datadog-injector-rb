@@ -72,7 +72,7 @@ else
         ], { :result => report.completed(injected) })
       end
     rescue StandardError => e
-      log.info { "inject:fatal exc:#{e.name},#{e.message.inspect}" }
+      log.info { "inject:fatal exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },

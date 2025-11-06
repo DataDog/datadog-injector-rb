@@ -49,6 +49,7 @@ class << self
 
     ::Bundler::Settings.prepend mod
 
+    require 'bundler/cli'
     require 'bundler/cli/exec'
 
     mod = Module.new do

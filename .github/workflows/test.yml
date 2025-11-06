@@ -122,6 +122,7 @@ jobs:
         run: ruby test/bin/test.rb --filter engine:${{ matrix.ruby.engine }} --filter version:${{ matrix.ruby.version }}
         env:
           DOCKER_BUILDKIT: 1
+          DD_INTERNAL_RUBY_INJECTOR_LOG_LEVEL: DEBUG
 
   complete:
     name: Test (complete)

@@ -53,6 +53,7 @@ SUITE = [
     { fixture: 'hot', bundle: 'unlocked' },
     { fixture: 'deployment', bundle: 'unlocked' },
     { fixture: 'frozen', bundle: 'unlocked' },
+    { fixture: 'vendored', bundle: 'unlocked' },
     { fixture: 'unbundled' },
   ] => {
     [
@@ -119,6 +120,27 @@ SUITE = [
   },
 
   { bundle: 'locked' } => [
+    [{ fixture: 'vendored', env: 'BUNDLE_DEPLOYMENT=true' }, { fixture: 'deployment', env: 'BUNDLE_PATH=/bundle' }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should proceed',
+        'injection should succeed',
+        'telemetry should include complete',
+        'abort reason should be empty',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
     [{ fixture: 'deployment' }, { fixture: 'hot', env: 'BUNDLE_DEPLOYMENT=true' }] => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -161,7 +183,7 @@ SUITE = [
         'reported result type should be success',
       ],
     },
-    { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
+    [{ fixture: 'vendored' }, { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' }] => {
       [
         { engine: 'ruby', version: '1.8' },
         { engine: 'ruby', version: '1.9' },
@@ -329,6 +351,52 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    [{ fixture: 'vendored', inject: true, injector: 'datadog', packaged: true }, { fixture: 'hot', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    [{ fixture: 'vendored', env: 'BUNDLE_DEPLOYMENT=true', inject: true, injector: 'datadog', packaged: true }, { fixture: 'deployment', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',

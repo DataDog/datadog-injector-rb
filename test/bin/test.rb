@@ -686,6 +686,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil)
       --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
       --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
       --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
+      --volume datadog-injector-rb-bundle-path-#{engine}-#{tag}-#{arch}:/bundle:rw
       --volume #{Dir.pwd}:#{Dir.pwd}:rw
       --workdir #{Dir.pwd}
       --platform linux/#{arch}

@@ -370,6 +370,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -393,6 +394,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -416,6 +418,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',

@@ -125,10 +125,12 @@ class << self
     return [false, nil] unless gemfile
 
     if context[:bundler][:deployment]
-      ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=deployment,path=#{package_gem_home}:#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}"
-      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}" }
+      app_bundle_path = context[:bundler][:bundle_path]
+
+      ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=deployment,path=#{package_gem_home}:#{app_bundle_path}"
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{app_bundle_path}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
-      ENV['GEM_HOME'] = "#{Dir.pwd}/vendor/bundle/#{context[:ruby][:engine]}/#{context[:ruby][:api_version]}"
+      ENV['GEM_HOME'] = app_bundle_path
 
       BUNDLER.patch!
     else

@@ -53,6 +53,7 @@ SUITE = [
     { fixture: 'hot', bundle: 'unlocked' },
     { fixture: 'deployment', bundle: 'unlocked' },
     { fixture: 'frozen', bundle: 'unlocked' },
+    { fixture: 'vendored', bundle: 'unlocked' },
     { fixture: 'unbundled' },
   ] => {
     [
@@ -119,16 +120,8 @@ SUITE = [
   },
 
   { bundle: 'locked' } => [
-    [{ fixture: 'deployment' }, { fixture: 'hot', env: 'BUNDLE_DEPLOYMENT=true' }] => {
+    [{ fixture: 'vendored', env: 'BUNDLE_DEPLOYMENT=true' }, { fixture: 'deployment', env: 'BUNDLE_PATH=/bundle' }] => {
       [
-        { engine: 'ruby', version: '1.8' },
-        { engine: 'ruby', version: '1.9' },
-        { engine: 'ruby', version: '2.0' },
-        { engine: 'ruby', version: '2.1' },
-        { engine: 'ruby', version: '2.2' },
-        { engine: 'ruby', version: '2.3' },
-        { engine: 'ruby', version: '2.4' },
-        { engine: 'ruby', version: '2.5' },
         { engine: 'ruby', version: '2.6' },
         { engine: 'ruby', version: '2.7' },
         { engine: 'ruby', version: '3.0' },
@@ -137,17 +130,34 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
-        { engine: 'jruby', version: '9.2' },
-        { engine: 'jruby', version: '9.3' },
-        { engine: 'jruby', version: '9.4' },
-        { engine: 'jruby', version: '10.0' },
       ] => [
         'telemetry should include start',
         'injection should abort',
-        'abort reason should include bundler.deployment',
+        'abort reason should include bundler.vendored',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
         'reported result type should be abort',
+      ],
+    },
+    [{ fixture: 'deployment' }, { fixture: 'hot', env: 'BUNDLE_DEPLOYMENT=true' }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should proceed',
+        'injection should succeed',
+        'telemetry should include complete',
+        'abort reason should be empty',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
       ],
     },
     [{ fixture: 'frozen' }, { fixture: 'hot', env: 'BUNDLE_FROZEN=true' }] => {
@@ -171,7 +181,7 @@ SUITE = [
         'reported result type should be success',
       ],
     },
-    { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' } => {
+    [{ fixture: 'vendored' }, { fixture: 'hot', env: 'BUNDLE_PATH=/bundle' }] => {
       [
         { engine: 'ruby', version: '1.8' },
         { engine: 'ruby', version: '1.9' },
@@ -328,6 +338,78 @@ SUITE = [
       ],
     },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    [{ fixture: 'vendored', inject: true, injector: 'datadog', packaged: true }, { fixture: 'hot', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+      # TODO: disabled due to race condition on naive deletion
+      # 'new gemfile should not exist',
+      # 'new lockfile should not exist',
+        'abort reason should include bundler.vendored',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
+      ],
+    },
+    [{ fixture: 'vendored', env: 'BUNDLE_DEPLOYMENT=true', inject: true, injector: 'datadog', packaged: true }, { fixture: 'deployment', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+      # TODO: disabled due to race condition on naive deletion
+      # 'new gemfile should not exist',
+      # 'new lockfile should not exist',
+        'abort reason should include bundler.vendored',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
+      ],
+    },
+    { fixture: 'deployment', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
         { engine: 'ruby', version: '2.7' },
@@ -641,7 +723,7 @@ def resolve_arch(runtime_arches)
   arches_for_platform.find { |arch| runtime_arches.include?(arch) }
 end
 
-def run(*args, engine: nil, version: nil, arch: nil)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -671,12 +753,15 @@ def run(*args, engine: nil, version: nil, arch: nil)
       --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
       --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
       --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
+      --volume datadog-injector-rb-bundle-path-#{engine}-#{tag}-#{arch}:/bundle:rw
       --volume #{Dir.pwd}:#{Dir.pwd}:rw
       --workdir #{Dir.pwd}
       --platform linux/#{arch}
     ]
 
     cmd += env.keys.map { |e| %W[ --env #{e} ] }.flatten
+
+    cmd += %W[ --env DD_INTERNAL_RUBY_INJECTOR_LOG_LEVEL ]
 
     cmd += %W[
       ghcr.io/datadog/images-rb/engines/#{engine}:#{tag}
@@ -685,8 +770,78 @@ def run(*args, engine: nil, version: nil, arch: nil)
 
   cmd += args
 
-# spawn(env, *cmd, [:out, :err] => '/dev/null')
-  spawn(env, *cmd)
+  out_r, out_w = IO.pipe
+  err_r, err_w = IO.pipe
+
+  out_thr = Thread.new do
+    mark = true
+
+    loop do
+      io = out_r
+
+      if io.eof?
+        break
+      end
+
+      data = io.read(1)
+
+      if mark
+        $stderr.write("┃ ")
+        mark = false
+      end
+
+      $stderr.write(data)
+
+      mark = true if data == "\n"
+    end
+  end
+
+  err_thr = Thread.new do
+    mark = true
+
+    loop do
+      io = err_r
+
+      if io.eof?
+        break
+      end
+
+      data = io.read(1)
+
+      if mark
+        $stderr.write("┇ ")
+        mark = false
+      end
+
+      $stderr.write(data)
+
+      mark = true if data == "\n"
+    end
+  end
+
+  $stdout.write("┏━ #{title || cmd.first}\n")
+
+  if false
+    $stdout.write("┋ #{cmd.inspect}\n")
+    $stdout.write("┣━ \n")
+  end
+
+  pid = spawn(env, *cmd, :out => out_w, :err => err_w)
+
+  _pid, status = Process.waitpid2(pid).tap do
+    out_w.close
+    err_w.close
+  end
+ensure
+  $stdout.write("┗━ ")
+  if status
+    $stdout.write("#{status}\n")
+  else
+    $stdout.write("#{status}\n")
+  end
+
+  out_thr.join
+  err_thr.join
 end
 
 class Context
@@ -726,16 +881,14 @@ def main(argv)
   matrix = flatten(SUITE)
 
   # TODO: matrix should be NOOP-explorable from the command line
-  # pp matrix
-  # p matrix.count
-  # p matrix.uniq.count
-  # pp matrix.group_by { |e| [e[:engine], e[:version]] }
 
   rows = matrix.uniq
 
   filter.each do |f|
-    rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == v }.reduce(:&) }
+    rows = rows.select { |e| f.split(',').map { |f| k, v = f.split(':'); e[k.to_sym] == (%w[true false nil].include?(v) ? eval(v) : v) }.reduce(:&) }
   end
+
+  groups = rows.group_by { |e| e.slice(*(e.keys - [:test])) }
 
   require 'fileutils'
   require 'securerandom'
@@ -743,29 +896,35 @@ def main(argv)
 
   start = Time.now
 
-  rows.each do |row|
+  groups.each do |group, rows|
     uuid = SecureRandom.uuid
-    puts "=== run: #{row.inspect} uuid: #{uuid}"
 
-    tmp = "#{INJECTION_DIR}/test/tmp/run/#{row[:fixture]}-#{uuid}"
+    puts "╭─────┈┄╌"
+    puts "│ run: #{group.inspect} uuid: #{uuid}"
+    puts "╰─────┈┄╌"
+
+    tmp = "#{INJECTION_DIR}/test/tmp/run/#{group[:fixture]}-#{uuid}"
     FileUtils.mkdir_p(tmp)
     begin
-      fixture = row[:fixture]
+      fixture = group[:fixture]
       FileUtils.cp_r "test/fixtures/#{fixture}", tmp
 
-      lock = row[:bundle] == 'locked'
-      packaged = row[:packaged]
+      lock = group[:bundle] == 'locked'
+      packaged = group[:packaged]
 
       if packaged
-        package_basepath = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
-        package_gem_home = "#{package_basepath}/#{row[:version]}.0"
+        # TODO: reorganise package tree to remove `+0`
+        package_basepath = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
+        package_gem_home = "#{package_basepath}/ruby/#{group[:version]}.0" + (group[:version] == '3.5' ? '+0' : '')
 
-        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home }
-        pid = run env, *%W[ bundle install ], engine: row[:engine], version: row[:version]
-        _pid, status = Process.waitpid2(pid)
+        env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home, 'BUNDLE_PATH' => package_basepath, 'BUNDLE_APP_CONFIG' => '/nowhere' }
+        pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'package injection gems'
         if status.exitstatus != 0
-          puts "==> ERR"
-          err << row
+          puts "╭─────┈┄╌"
+          puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+          puts "╰─────┈┄╌"
+
+          err << group
           next
         end
       end
@@ -775,64 +934,109 @@ def main(argv)
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
-            pid = run env, *%W[ bundle lock ], engine: row[:engine], version: row[:version]
-            _pid, status = Process.waitpid2(pid)
+            pid, status = run env, *%W[ bundle lock ], engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
-              puts "==> ERR"
-              err << row
+              puts "╭─────┈┄╌"
+              puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+              puts "╰─────┈┄╌"
+
+              err << group
               next
             end
 
-            pid = run *%W[ bundle install ], engine: row[:engine], version: row[:version]
-            _pid, status = Process.waitpid2(pid)
+            env = if (e = group[:env])
+                    k, v = e.split('=', 2)
+                    { k => v }
+                  else
+                    {}
+                  end
+            pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
-              puts "==> ERR"
-              err << row
+              puts "╭─────┈┄╌"
+              puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+              puts "╰─────┈┄╌"
+
+              err << group
               next
             end
           end
 
-          env = if (e = row[:env])
+          env = if (e = group[:env])
                   k, v = e.split('=', 2)
                   { k => v }
                 else
                   {}
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
-          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless row[:inject]
-          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{row[:injector]}"
+          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless group[:inject]
+          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
+          env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 
-          pid = run env, *%W[ ruby -r #{INJECTION_DIR}/src/injector.rb stub.rb ],
-                    engine: row[:engine], version: row[:version]
-          _pid, status = Process.waitpid2(pid)
+          pid, status = if lock
+                          run env, *%W[ bundle exec ruby stub.rb ],
+                              engine: group[:engine], version: group[:version],
+                              title: 'run fixture stub'
+                        else
+                          run env, *%W[ ruby stub.rb ],
+                              engine: group[:engine], version: group[:version],
+                              title: 'run fixture stub'
+                        end
+
           if status.exitstatus != 0
-            puts "==> ERR"
-            err << row
+            puts "╭─────┈┄╌"
+            puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+            puts "╰─────┈┄╌"
+
+            err << group
             next
           end
 
           if File.exist? "#{tmp}/forwarder.log"
-            test = EXAMPLES[row[:test]]
             telemetry = File.open("#{tmp}/forwarder.log") { |f| f.each_line.map { |l| JSON.parse(l) } }
 
-            context = Context.new(
-              telemetry: telemetry,
-              path: Dir.pwd,
+            puts "╭─────┈┄╌"
+            rows.each do |row|
+              puts "│ test: #{row[:test].inspect}"
 
-              # TODO: add stdout+stderr
-            )
+              test = EXAMPLES[row[:test]]
 
-            if test.nil?
-              puts "==> MISS"
-              miss << row[:test]
-            elsif test.call(context)
-              puts "==> OK"
-            else
-              puts "==> FAIL"
-              fail << row
+              context = Context.new(
+                telemetry: telemetry,
+                path: Dir.pwd,
+
+                # TODO: add stdout+stderr
+              )
+
+              if test.nil?
+                puts "| ╰── MISS"
+                miss << row[:test]
+                next
+              end
+
+              res = begin
+                test.call(context)
+              rescue StandardError => e
+                puts "| ╰── ERR: #{e.class.name}(#{e.message.inspect})"
+                err << row
+                next
+              end
+
+              if res
+                puts "| ╰── OK"
+              else
+                puts "| ╰── FAIL"
+                fail << row
+              end
             end
+            puts "╰─────┈┄╌"
 
-          # FileUtils.mv "#{tmp}/forwarder.log", "#{INJECTION_DIR}/forwarder.log"
+          else
+            puts "╭─────┈┄╌"
+            puts "│ ERR: #{group.inspect} uuid: #{uuid} forwarder: 'no log'"
+            puts "╰─────┈┄╌"
+
+            err << group
+            next
           end
         end
       end

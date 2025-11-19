@@ -43,7 +43,7 @@ class << self
   private :primitive
 
   def status
-    {
+    @status ||= {
       :ruby => {
         :version => RUBY.version,
         :api_version => RUBY.api_version,

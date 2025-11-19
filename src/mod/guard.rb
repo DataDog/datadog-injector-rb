@@ -48,16 +48,12 @@ class << self
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
+    if status[:bundler][:settings][:path]
+      result << { :name => 'bundler.path', :reason => 'bundler.vendored' }
+    end
+
     if !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
-    end
-
-    if status[:bundler][:deployment]
-      result << { :name => 'bundler.deployment', :reason => 'bundler.deployment' }
-    end
-
-    if !status[:bundler][:use_system_gems]
-      result << { :name => 'bundler.use_system_gems', :reason => 'bundler.vendored' }
     end
 
     result unless result.empty?

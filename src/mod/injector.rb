@@ -59,15 +59,15 @@ module Patch
 end
 
 class << self
-  def call
-    LOG.info { 'injector:call' }
+  def call(context)
+    LOG.info { "injector:call context:#{context}" }
 
     # TODO: check if nested injection (maybe very early too)
     # TODO: check if injection already performed
 
     # TODO: extract to a package module
     package_basepath = ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.expand_path(File.join(File.dirname(__FILE__), '..'))
-    package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, RUBY.api_version)
+    package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, 'ruby', RUBY.api_version)
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
     # TODO: capture stdout+stderr
@@ -76,13 +76,12 @@ class << self
 
       BUNDLER.send(:require!)
 
-      # TODO: these are in context
       # pinpoint app gemfile and lockfile
-      app_gemfile  = Bundler.default_gemfile
-      app_lockfile = Bundler.default_lockfile
+      app_gemfile  = context[:bundler][:gemfile]
+      app_lockfile = context[:bundler][:lockfile]
 
       # determine output paths
-      out = File.join(app_gemfile.dirname)
+      out = File.dirname(app_gemfile)
 
       # TODO: this should work, unless the app's Gemfile has relative references...
       # if File.writable?(File.join(out, 'tmp'))
@@ -118,12 +117,27 @@ class << self
 
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
-    return [nil, err] if err
+    if err
+      LOG.debug { "error: #{err}"}
+      return [nil, err]
+    end
 
     return [false, nil] unless gemfile
 
-    Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
-    ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    if context[:bundler][:deployment]
+      app_bundle_path = context[:bundler][:bundle_path]
+
+      ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=deployment,path=#{package_gem_home}:#{app_bundle_path}"
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{app_bundle_path}" }
+      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+      ENV['GEM_HOME'] = app_bundle_path
+
+      BUNDLER.patch!
+    else
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
+      ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+    end
+
     ENV['BUNDLE_GEMFILE'] = gemfile
 
     [true, nil]

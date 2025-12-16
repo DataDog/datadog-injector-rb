@@ -57,26 +57,26 @@ else
     begin
       # TODO: pass args, e.g context, location, etc...
       injected, err = injector.call(context.status)
-
-      if err
-        log.info { "inject:error err:#{err.inspect}" }
-
-        telemetry.emit([
-          { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
-        ], { :result => report.errored(err) })
-      else
-        log.info { 'inject:complete' }
-
-        telemetry.emit([
-          { :name => 'library_entrypoint.complete' },
-        ], { :result => report.completed(injected) })
-      end
     rescue StandardError => e
       log.info { "inject:fatal exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
       ], { :result => report.raised(e) })
+    end
+
+    if err
+      log.info { "inject:error err:#{err.inspect}" }
+
+      telemetry.emit([
+        { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
+      ], { :result => report.errored(err) })
+    else
+      log.info { 'inject:complete' }
+
+      telemetry.emit([
+        { :name => 'library_entrypoint.complete' },
+      ], { :result => report.completed(injected) })
     end
   end
 end

@@ -32,32 +32,36 @@ class << self
   private :payload
 
   def emit(*args)
-    opts = args.last.is_a?(Hash) ? args.pop : {}
-    points = args.shift
+    begin
+      opts = args.last.is_a?(Hash) ? args.pop : {}
+      points = args.shift
 
-    LOG.info { "telemetry:emit points:#{points.inspect}" }
+      LOG.info { "telemetry:emit points:#{points.inspect}" }
 
-    pid = opts[:pid] || PROCESS.pid # TODO: emit from isolate
-    version = opts[:version] || package_version
-    result = opts[:result]
+      pid = opts[:pid] || PROCESS.pid # TODO: emit from isolate
+      version = opts[:version] || package_version
+      result = opts[:result]
 
-    forwarder = ENV['DD_TELEMETRY_FORWARDER_PATH']
+      forwarder = ENV['DD_TELEMETRY_FORWARDER_PATH']
 
-    return unless forwarder && !forwarder.empty?
+      return unless forwarder && !forwarder.empty?
 
-    rd, wr = IO.pipe
+      rd, wr = IO.pipe
 
-    opt = ENV.delete('RUBYOPT')
-    pid = PROCESS.spawn(forwarder, 'library_entrypoint', { :in => rd, [:out, :err] => '/dev/null' })
-    ENV['RUBYOPT'] = opt if opt
+      opt = ENV.delete('RUBYOPT')
+      pid = PROCESS.spawn(forwarder, 'library_entrypoint', { :in => rd, [:out, :err] => '/dev/null' })
+      ENV['RUBYOPT'] = opt if opt
 
-    wr.write(payload(pid, version, result, points))
-    wr.flush
-    wr.close
+      wr.write(payload(pid, version, result, points))
+      wr.flush
+      wr.close
 
-    cpid, status = Process.waitpid2(pid)
+      cpid, status = Process.waitpid2(pid)
 
-    LOG.info { "telemetry:forwarder cpid:#{cpid} status:#{status}" }
+      LOG.info { "telemetry:forwarder cpid:#{cpid} status:#{status}" }
+    rescue StandardError => exc
+      LOG.info { "telemetry:error exc:#{exc}" }
+    end
   end
 
   # TODO: extract to a package module

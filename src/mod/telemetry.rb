@@ -48,7 +48,9 @@ class << self
 
       rd, wr = IO.pipe
 
+      opt = ENV.delete('RUBYOPT')
       pid = PROCESS.spawn(forwarder, 'library_entrypoint', { :in => rd, [:out, :err] => '/dev/null' })
+      ENV['RUBYOPT'] = opt if opt
 
       wr.write(payload(pid, version, result, points))
       wr.flush

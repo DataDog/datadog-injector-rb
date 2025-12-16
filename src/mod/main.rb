@@ -40,7 +40,15 @@ else
   injector = import 'injector'
 
   if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
-    log.info { 'inject:skip' }
+    if ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH']
+      log.info { 'inject:patch' }
+
+      bundler = import 'bundler'
+
+      bundler.patch!
+    else
+      log.info { 'inject:skip' }
+    end
 
     telemetry.emit([
       { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
@@ -48,9 +56,9 @@ else
   else
     begin
       # TODO: pass args, e.g context, location, etc...
-      injected, err = injector.call
+      injected, err = injector.call(context.status)
     rescue StandardError => e
-      log.info { 'inject:error' }
+      log.info { "inject:fatal exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
@@ -58,6 +66,8 @@ else
     end
 
     if err
+      log.info { "inject:error err:#{err.inspect}" }
+
       telemetry.emit([
         { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
       ], { :result => report.errored(err) })

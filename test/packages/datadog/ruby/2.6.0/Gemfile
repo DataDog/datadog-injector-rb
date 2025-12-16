@@ -1,0 +1,33 @@
+source 'https://rubygems.org'
+
+gem 'datadog'
+gem 'ffi', '1.16.3'
+
+# Ruby 2.6 decided to activate the default gem via `Kernel.gem` which makes it
+# subject to isolation, hence breaking under vendored mode.
+#
+# This `Kernel.gem` activation happens in `gem_prelude` and can only be skipped
+# with the `--disable=did_you_mean` CLI flag.
+#
+# Ruby 2.7 reverted that problematic behaviour, instead resorting to a plain
+# `require` which will either simply load from `$LOAD_PATH` or use a bundled
+# version.
+#
+# To ensure no crash happens on Ruby 2.6 we package the corresponding
+# `did_you_mean` version.
+#
+# See:
+# - gem_prelude.rb calls `Kernel.gem` on 2.6, but not 2.7:
+#   https://github.com/ruby/ruby/blob/ruby_2_6/gem_prelude.rb#L3-L7
+#   https://github.com/ruby/ruby/blob/ruby_2_7/gem_prelude.rb#L2
+# - gem_prelude.rb is included as a prelude script
+#   https://github.com/ruby/ruby/blob/ruby_2_6/common.mk#L158-L161
+# - prelude scripts get compiled in prelude.c:
+#   https://github.com/ruby/ruby/blob/ruby_2_6/common.mk#L1050-L1059
+# - prelude.c is generated from a template:
+#   https://github.com/ruby/ruby/blob/ruby_2_6/common.mk#L189
+# - the template embeds ISeqs of scripts
+#   https://github.com/ruby/ruby/blob/ruby_2_6/template/prelude.c.tmpl#L167-L168
+# - prelude targets are just prelude.c:
+#   https://github.com/ruby/ruby/blob/ruby_2_6/common.mk#L1081-L1082
+gem 'did_you_mean', '1.3.0'

@@ -26,7 +26,14 @@ class << self
   end
 
   def level
-    UNKNOWN
+    @level ||= case ENV['DD_INTERNAL_RUBY_INJECTOR_LOG_LEVEL']
+               when 'DEBUG', 0 then DEBUG
+               when 'INFO',  1 then INFO
+               when 'WARN',  2 then WARN
+               when 'ERROR', 3 then ERROR
+               when 'FATAL', 4 then FATAL
+               else UNKNOWN
+               end
   end
 
   def add(severity, message = nil, progname = nil)

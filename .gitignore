@@ -3,9 +3,11 @@
 /Gemfile.lock
 
 # transient files
-/test/tmp/
-/test/packages/
 /tmp/
+/test/tmp/
+/test/packages/*/*/*/
+!/test/packages/*/*/*/Gemfile
+!/test/packages/*/*/*/Gemfile.lock
 
 # tooling
 /.ruby-lsp/

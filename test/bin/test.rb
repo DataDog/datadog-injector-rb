@@ -1022,8 +1022,13 @@ def main(argv)
                   {}
                 end
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
+
+          # HACK: skip injector.call to make tests faster
           env['DD_INTERNAL_RUBY_INJECTOR'] = 'false' unless group[:inject]
-          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector]}"
+
+          # HACK: default to 'datadog' package for stored metadata (version) to be picked up
+          env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector] || 'datadog'}"
+
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 
           pid, status = if lock

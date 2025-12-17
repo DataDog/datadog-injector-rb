@@ -8,7 +8,7 @@ require 'rubygems' unless defined?(Gem)
 
 puts "stub:#{stub} GEM_PATH:#{ENV['GEM_PATH'].inspect}"
 puts "stub:#{stub} Gem.path:#{Gem.path.inspect}"
-puts "stub:#{stub} deps:#{Gem.loaded_specs.map { |name, spec| [name, spec.version.to_s] }}"
+puts "stub:#{stub} deps:#{Gem.loaded_specs.map { |name, spec| [name, spec.version.to_s] }.inspect}"
 
 if Gem.loaded_specs['datadog']
   require 'datadog'

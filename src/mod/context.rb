@@ -42,11 +42,27 @@ class << self
   end
   private :primitive
 
+  def package
+    # TODO: extract to a package module
+
+    package_basepath = ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.expand_path(File.join(File.dirname(__FILE__), '..'))
+    package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, 'ruby', RUBY.api_version)
+    package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
+
+    {
+      :basepath => package_basepath,
+      :gem_home => package_gem_home,
+      :lockfile => package_lockfile,
+    }
+  end
+  private :package
+
   def status
     @status ||= {
       :inject => {
         :preload => {},
         :ruby => {
+          :package => package,
           :force => Hash[ENV['DD_INTERNAL_RUBY_INJECTOR_FORCE'].tap { |s| break(s && s.split(',').map(&:strip) || []) }.map { |k| [k, true] }]
         },
       },

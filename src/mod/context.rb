@@ -49,13 +49,16 @@ class << self
     package_gem_home = ENV['DD_INTERNAL_RUBY_INJECTOR_GEM_HOME'] || File.join(package_basepath, 'ruby', RUBY.api_version)
     package_lockfile = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE'] || File.join(package_gem_home, 'Gemfile.lock')
 
+    package_version_file = File.join(package_basepath, 'version')
+    package_version = File.read(package_version_file).chomp if File.exist?(package_version_file)
+
     {
       :basepath => package_basepath,
       :gem_home => package_gem_home,
       :lockfile => package_lockfile,
+      :version => package_version,
     }
   end
-  private :package
 
   def fs(bundler)
     target = (bundler[:gemfile] ? File.dirname(bundler[:gemfile]) : Dir.pwd)

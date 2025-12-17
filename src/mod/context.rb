@@ -74,12 +74,10 @@ class << self
   end
   private :fs
 
-  def status
-    return @status unless @status.nil?
-
+  def eval
     bundler = isolate { BUNDLER.status }
 
-    @status = {
+    {
       :inject => {
         :preload => {},
         :ruby => {

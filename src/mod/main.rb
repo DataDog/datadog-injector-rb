@@ -11,72 +11,87 @@ process = import 'process'
 telemetry.emit([{ :name => 'library_entrypoint.start' }])
 
 log = import 'log'
+report = import 'report'
 
 # TODO: config
 
 # stage 1: gather context
 context = import 'context'
 
-log.info { "context: #{context.status.inspect}" }
+context_status = begin
+                   context.eval
+                 rescue StandardError => e
+                   log.info { "inject:fatal at:context exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
-# stage 2: check context against requirements
-guard = import 'guard'
+                   telemetry.emit([
+                     { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
+                   ], { :result => report.raised(e) })
 
-report = import 'report'
+                   nil # NOOP: falls through to end
+                 end
 
-if (result = guard.call(context.status))
-  log.info { "guard:call result:#{result.inspect}" }
+unless context_status.nil?
+  # stage 2: check context against requirements
 
-  tags = result.map { |r| "reason:#{r[:reason]}" }
+  log.info { "context: #{context_status.inspect}" }
 
-  telemetry.emit([
-    { :name => 'library_entrypoint.abort', :tags => tags },
-  ], { :result => report.aborted(result) })
+  guard = import 'guard'
 
-# stage 3: inject
-else
-  log.info { 'inject:proceed' }
+  if (result = guard.call(context_status))
+    log.info { "guard:call result:#{result.inspect}" }
 
-  injector = import 'injector'
-
-  if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
-    if ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH']
-      log.info { 'inject:patch' }
-
-      bundler = import 'bundler'
-
-      bundler.patch!
-    else
-      log.info { 'inject:skip' }
-    end
+    tags = result.map { |r| "reason:#{r[:reason]}" }
 
     telemetry.emit([
-      { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
-    ], { :result => report.cached })
+      { :name => 'library_entrypoint.abort', :tags => tags },
+    ], { :result => report.aborted(result) })
+
   else
-    begin
-      # TODO: pass args, e.g context, location, etc...
-      injected, err = injector.call(context.status)
-    rescue StandardError => e
-      log.info { "inject:fatal exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
+    # stage 3: inject
+
+    log.info { 'inject:proceed' }
+
+    injector = import 'injector'
+
+    if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+      if ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH']
+        log.info { 'inject:patch' }
+
+        bundler = import 'bundler'
+
+        bundler.patch!
+      else
+        log.info { 'inject:skip' }
+      end
 
       telemetry.emit([
-        { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
-      ], { :result => report.raised(e) })
-    end
-
-    if err
-      log.info { "inject:error err:#{err.inspect}" }
-
-      telemetry.emit([
-        { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
-      ], { :result => report.errored(err) })
+        { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
+      ], { :result => report.cached })
     else
-      log.info { 'inject:complete' }
+      begin
+        # TODO: pass args, e.g context, location, etc...
+        injected, err = injector.call(context_status)
+      rescue StandardError => e
+        log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
-      telemetry.emit([
-        { :name => 'library_entrypoint.complete' },
-      ], { :result => report.completed(injected) })
+        telemetry.emit([
+          { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
+        ], { :result => report.raised(e) })
+      end
+
+      if err
+        log.info { "inject:error err:#{err.inspect}" }
+
+        telemetry.emit([
+          { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
+        ], { :result => report.errored(err) })
+      else
+        log.info { 'inject:complete' }
+
+        telemetry.emit([
+          { :name => 'library_entrypoint.complete' },
+        ], { :result => report.completed(injected) })
+      end
     end
   end
 end

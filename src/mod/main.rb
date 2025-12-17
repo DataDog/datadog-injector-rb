@@ -83,18 +83,23 @@ unless context_status.nil?
         { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
       ], { :result => report.cached })
     else
-      begin
-        # TODO: pass args, e.g context, location, etc...
-        injected, err = injector.call(context_status)
-      rescue StandardError => e
-        log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
+      injected, err = begin
+                        # TODO: pass args, e.g context, location, etc...
+                        injector.call(context_status)
+                      rescue StandardError => e
+                        log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
-        telemetry.emit([
-          { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
-        ], { :result => report.raised(e) })
-      end
+                        telemetry.emit([
+                          { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
+                        ], { :result => report.raised(e) })
 
-      if err
+                        [nil, :exc]
+                      end
+
+      case err
+      when :exc
+        # NOOP, falls through to end
+      when String
         log.info { "inject:error err:#{err.inspect}" }
 
         telemetry.emit([

@@ -14,10 +14,9 @@ class << self
     when 'bundler.version'               then 'incompatible_component'
     when 'bundler.unbundled'             then 'unsupported_binary'
     when 'bundler.unlocked'              then 'incompatible_component'
-    when 'bundler.frozen'                then 'incompatible_component'
-    when 'bundler.deployment'            then 'incompatible_environment'
     when 'bundler.vendored'              then 'incompatible_environment'
     when 'bundler.version.simulated'     then 'incompatible_environment'
+    when 'bundler.platform.forced'       then 'incompatible_environment'
 
     # error reasons
     when 'bundler.inject'                then 'incompatible_dependency'
@@ -53,12 +52,10 @@ class << self
       'The Ruby process is not running in a bundle (no Gemfile found)'
     when 'bundler.unlocked'
       'The Ruby process has no dependency lock (no Gemfile.lock found)'
-    when 'bundler.frozen'
-      'Bundler is configured to freeze the dependency bundle'
-    when 'bundler.deployment'
-      'Bundler is configured in strict deployment mode'
     when 'bundler.vendored'
       'Bundler is configured to ignore gems out of the vendored path'
+    when 'bundler.platform.forced'
+      'Bundler is configured to force an incompatible or restricted gem platform'
     when 'fs.readonly'
       'The Gemfile directory is read-only'
 

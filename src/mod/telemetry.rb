@@ -64,13 +64,13 @@ class << self
     end
   end
 
-  # TODO: extract to a package module
+  # TODO: extract to a package module; see context too
   def package_basepath
     ENV['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] || File.expand_path(File.join(File.dirname(__FILE__), '..'))
   end
   private :package_basepath
 
-  # TODO: extract to a package module
+  # TODO: extract to a package module; or move to context
   def package_version
     return unless File.exist?("#{package_basepath}/version")
 

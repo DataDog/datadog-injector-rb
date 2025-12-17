@@ -79,13 +79,7 @@ class << self
       app_lockfile = context[:bundler][:lockfile]
 
       # determine output paths
-      out = File.dirname(app_gemfile)
-
-      # TODO: this should work, unless the app's Gemfile has relative references...
-      # if File.writable?(File.join(out, 'tmp'))
-      #   out = File.join(out, 'tmp', 'datadog')
-      #   Dir.mkdir(out)
-      # end
+      out = context[:fs][:target]
 
       # TODO: hash path + content to detect changes
       datadog_gemfile  = File.join(out, 'datadog.gemfile')

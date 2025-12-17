@@ -57,8 +57,29 @@ class << self
   end
   private :package
 
+  def fs(bundler)
+    target = (bundler[:gemfile] ? File.dirname(bundler[:gemfile]) : Dir.pwd)
+
+    # TODO: make a list of candidate targets and whether they're writable or not
+    # e.g this could work, unless the app's Gemfile has relative references...
+    #
+    #     if File.writable?(File.join(app_root, 'tmp'))
+    #       targets << File.join(app_root, 'tmp', 'datadog')
+    #     end
+
+    {
+      :target => target,
+      :writable => File.writable?(target)
+    }
+  end
+  private :fs
+
   def status
-    @status ||= {
+    return @status unless @status.nil?
+
+    bundler = isolate { BUNDLER.status }
+
+    @status = {
       :inject => {
         :preload => {},
         :ruby => {
@@ -78,10 +99,9 @@ class << self
         :name => PROCESS.name,
         :args => PROCESS.args,
         :cmdline => PROCESS.cmdline,
+        :wd => Dir.pwd,
       },
-      :fs => {
-        :writable => File.writable?(Dir.pwd),
-      },
+      :fs => fs(bundler),
       :runtime => {
         :fork => Process.respond_to?(:fork),
         :spawn => Process.respond_to?(:spawn),
@@ -89,7 +109,7 @@ class << self
         :version => RUNTIME.version,
         :name => RUNTIME.name,
       },
-      :bundler => isolate { BUNDLER.status }
+      :bundler => bundler
     }
   end
 end

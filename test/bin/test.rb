@@ -339,6 +339,30 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    [{ fixture: 'force_ruby', inject: true, injector: 'datadog', packaged: true }, { fixture: 'hot', env: 'BUNDLE_FORCE_RUBY_PLATFORM=true', inject: true, injector: 'datadog', packaged: true }] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5' },
+      ] => [
+        'telemetry should include start',
+        'injection should abort',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+      # TODO: disabled due to race condition on naive deletion
+      # 'new gemfile should not exist',
+      # 'new lockfile should not exist',
+        'abort reason should include bundler.platform.forced',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be abort',
+      ],
+    },
     { fixture: 'hot', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -550,6 +574,10 @@ end
 
 example 'abort reason should include bundler.vendored' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.vendored') } }
+end
+
+example 'abort reason should include bundler.platform.forced' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' && p['tags'].include?('reason:bundler.platform.forced') } }
 end
 
 example 'abort reason should include runtime.engine' do |context|

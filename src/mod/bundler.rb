@@ -29,6 +29,7 @@ class << self
         :frozen          => Bundler.settings[:frozen],
         :path            => Bundler.settings[:path],
         :app_config      => Bundler.settings[:app_config],
+        :force_ruby_platform => Bundler.settings[:force_ruby_platform],
       },
     }
   end

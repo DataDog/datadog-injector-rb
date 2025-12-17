@@ -18,6 +18,7 @@ class << self
     when 'bundler.deployment'            then 'incompatible_environment'
     when 'bundler.vendored'              then 'incompatible_environment'
     when 'bundler.version.simulated'     then 'incompatible_environment'
+    when 'bundler.platform.forced'       then 'incompatible_environment'
 
     # error reasons
     when 'bundler.inject'                then 'incompatible_dependency'

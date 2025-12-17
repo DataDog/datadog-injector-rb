@@ -78,6 +78,7 @@ SUITE = [
       { engine: 'jruby', version: '9.4' },
       { engine: 'jruby', version: '10.0' },
     ] => [
+      'telemetry should include metadata.tracer_version',
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unlocked',
@@ -110,6 +111,7 @@ SUITE = [
       { engine: 'jruby', version: '9.4' },
       { engine: 'jruby', version: '10.0' },
     ] => [
+      'telemetry should include metadata.tracer_version',
       'telemetry should include start',
       'injection should abort',
       'abort reason should include bundler.unbundled',
@@ -131,6 +133,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.vendored',
@@ -150,6 +153,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should proceed',
         'injection should succeed',
@@ -171,6 +175,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should proceed',
         'injection should succeed',
@@ -190,6 +195,7 @@ SUITE = [
         { engine: 'ruby', version: '2.2' },
         { engine: 'ruby', version: '2.3' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.parser',
@@ -208,6 +214,7 @@ SUITE = [
         { engine: 'ruby', version: '2.5' },
         { engine: 'ruby', version: '3.5' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.version',
@@ -221,6 +228,7 @@ SUITE = [
         { engine: 'jruby', version: '9.4' },
         { engine: 'jruby', version: '10.0' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.engine',
@@ -239,6 +247,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include bundler.vendored',
@@ -256,6 +265,7 @@ SUITE = [
         { engine: 'ruby', version: '2.2' },
         { engine: 'ruby', version: '2.3' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.parser',
@@ -274,6 +284,7 @@ SUITE = [
         { engine: 'ruby', version: '2.5' },
         { engine: 'ruby', version: '3.5' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.version',
@@ -287,6 +298,7 @@ SUITE = [
         { engine: 'jruby', version: '9.4' },
         { engine: 'jruby', version: '10.0' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'abort reason should include runtime.engine',
@@ -305,6 +317,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should proceed',
         'injection should succeed',
@@ -326,6 +339,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
@@ -350,6 +364,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'app gemfile should not include datadog',
@@ -374,6 +389,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
@@ -397,6 +413,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'app gemfile should not include datadog',
@@ -420,6 +437,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include start',
         'injection should abort',
         'app gemfile should not include datadog',
@@ -444,6 +462,7 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
+        'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
@@ -469,6 +488,7 @@ SUITE = [
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => {
         { fixture: 'common' } => [
+          'telemetry should include metadata.tracer_version',
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
@@ -483,6 +503,7 @@ SUITE = [
           'reported result type should be success',
         ],
         { fixture: 'conflict' } => [
+          'telemetry should include metadata.tracer_version',
           'telemetry should include error',
           'error reason should include bundler.inject',
           'app gemfile should not include datadog',
@@ -495,6 +516,7 @@ SUITE = [
           'reported result type should be error',
         ],
         { fixture: 'group' } => [
+          'telemetry should include metadata.tracer_version',
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
@@ -542,6 +564,10 @@ EXAMPLES = {}
 
 def example(desc, &block)
   EXAMPLES[desc] = block
+end
+
+example 'telemetry should include metadata.tracer_version' do |context|
+  context.telemetry.all? { |e| e['metadata']['tracer_version'] == '1.2.3' }
 end
 
 example 'telemetry should include start' do |context|

@@ -27,11 +27,11 @@ class << self
 
   def level
     @level ||= case ENV['DD_INTERNAL_RUBY_INJECTOR_LOG_LEVEL']
-               when 'DEBUG', 0 then DEBUG
-               when 'INFO',  1 then INFO
-               when 'WARN',  2 then WARN
-               when 'ERROR', 3 then ERROR
-               when 'FATAL', 4 then FATAL
+               when /^DEBUG$/i, '0' then DEBUG
+               when /^INFO$/i,  '1' then INFO
+               when /^WARN$/i,  '2' then WARN
+               when /^ERROR$/i, '3' then ERROR
+               when /^FATAL$/i, '4' then FATAL
                else UNKNOWN
                end
   end

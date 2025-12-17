@@ -37,7 +37,22 @@ unless context_status.nil?
 
   guard = import 'guard'
 
-  if (result = guard.call(context_status))
+  result = begin
+             guard.call(context_status)
+           rescue StandardError => e
+             log.info { "inject:fatal at:guard exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
+
+             telemetry.emit([
+               { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
+             ], { :result => report.raised(e) })
+
+             :exc
+           end
+
+  case result
+  when :exc
+    # NOOP, falls through to end
+  when Array
     log.info { "guard:call result:#{result.inspect}" }
 
     tags = result.map { |r| "reason:#{r[:reason]}" }

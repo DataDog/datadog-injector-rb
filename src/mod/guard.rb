@@ -4,59 +4,60 @@ class << self
   def call(status)
     result = []
 
-    if lower(status[:ruby][:version], 2, 4)
+    if !status[:inject][:ruby][:force]['ruby.version'] && lower(status[:ruby][:version], 2, 4)
       result << { :name => 'ruby.version', :reason => 'runtime.parser', :value => status[:ruby][:version] }
     end
 
-    if lower(status[:ruby][:version], 2, 6)
+    if !status[:inject][:ruby][:force]['ruby.version'] && lower(status[:ruby][:version], 2, 6)
       result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 
-    if min(status[:ruby][:version], 3, 5)
-      result << { :name => 'ruby.version', :reason => 'runtime.version' }
+    # actually, exclude all previews?
+    if !status[:inject][:ruby][:force]['ruby.version'] && min(status[:ruby][:version], 3, 5)
+      result << { :name => 'ruby.version', :reason => 'runtime.version' , :value => status[:ruby][:version]}
     end
 
-    if status[:ruby][:engine] != 'ruby'
+    if !status[:inject][:ruby][:force]['ruby.engine'] && status[:ruby][:engine] != 'ruby'
       result << { :name => 'ruby.engine', :reason => 'runtime.engine', :value => status[:ruby][:engine] }
     end
 
-    if !status[:runtime][:fork]
+    if !status[:inject][:ruby][:force]['runtime.fork'] && !status[:runtime][:fork]
       result << { :name => 'runtime.fork', :reason => 'runtime.forkless' }
     end
 
-    if lower(status[:bundler][:rubygems], 3, 4, 0)
+    if !status[:inject][:ruby][:force]['rubygems.version'] && lower(status[:bundler][:rubygems], 3, 4, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version', :value => status[:bundler][:rubygems] }
     end
 
-    if lower(status[:bundler][:version], 2, 4, 0)
+    if !status[:inject][:ruby][:force]['bundler.version'] && lower(status[:bundler][:version], 2, 4, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if min(status[:bundler][:rubygems], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['rubygems.version'] && min(status[:bundler][:rubygems], 4, 0, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version', :value => status[:bundler][:rubygems] }
     end
 
-    if min(status[:bundler][:version], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version'] && min(status[:bundler][:version], 4, 0, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if min(status[:bundler][:simulate_version], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version.simulated'] && min(status[:bundler][:simulate_version], 4, 0, 0)
       result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated', :value => status[:bundler][:simulate_version] }
     end
 
-    if !status[:bundler][:bundled]
+    if !status[:inject][:ruby][:force]['bundler.bundled'] && !status[:bundler][:bundled]
       result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
     end
 
-    if !status[:bundler][:locked]
+    if !status[:inject][:ruby][:force]['bundler.locked'] && !status[:bundler][:locked]
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
-    if status[:bundler][:settings][:path]
+    if !status[:inject][:ruby][:force]['bundler.path'] && status[:bundler][:settings][:path]
       result << { :name => 'bundler.path', :reason => 'bundler.vendored' }
     end
 
-    if !status[:fs][:writable]
+    if !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
     end
 

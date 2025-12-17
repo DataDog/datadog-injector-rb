@@ -148,7 +148,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include start',
         'injection should proceed',
@@ -169,7 +169,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include start',
         'injection should proceed',
@@ -206,6 +206,7 @@ SUITE = [
         { engine: 'ruby', version: '2.3' },
         { engine: 'ruby', version: '2.4' },
         { engine: 'ruby', version: '2.5' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -271,6 +272,7 @@ SUITE = [
         { engine: 'ruby', version: '2.3' },
         { engine: 'ruby', version: '2.4' },
         { engine: 'ruby', version: '2.5' },
+        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -301,7 +303,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include start',
         'injection should proceed',
@@ -322,7 +324,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -346,7 +348,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -370,7 +372,6 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -394,7 +395,6 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
       ] => [
         'telemetry should include start',
         'injection should abort',
@@ -418,7 +418,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -442,7 +442,7 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => {
         { fixture: 'common' } => [
           'telemetry should include complete',

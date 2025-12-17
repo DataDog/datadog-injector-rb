@@ -44,6 +44,12 @@ class << self
 
   def status
     @status ||= {
+      :inject => {
+        :preload => {},
+        :ruby => {
+          :force => Hash[ENV['DD_INTERNAL_RUBY_INJECTOR_FORCE'].tap { |s| break(s && s.split(',').map(&:strip) || []) }.map { |k| [k, true] }]
+        },
+      },
       :ruby => {
         :version => RUBY.version,
         :api_version => RUBY.api_version,

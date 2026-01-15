@@ -505,7 +505,7 @@ SUITE = [
         { fixture: 'conflict' } => [
           'telemetry should include metadata.tracer_version',
           'telemetry should include error',
-          'error reason should include bundler.inject',
+          'error reason should include bundler.inject.resolve',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
         # TODO: disabled due to race condition on naive deletion
@@ -680,8 +680,8 @@ example 'telemetry should include error' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' } }
 end
 
-example 'error reason should include bundler.inject' do |context|
-  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' && p['tags'].include?('reason:bundler.inject') } }
+example 'error reason should include bundler.inject.resolve' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' && p['tags'].include?('reason:bundler.inject.resolve') } }
 end
 
 example 'app gemfile should not include datadog' do |context|

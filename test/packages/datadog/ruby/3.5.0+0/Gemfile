@@ -1,5 +1,7 @@
 source 'https://rubygems.org'
 
 gem 'datadog'
+gem 'libddwaf', force_ruby_platform: true
+gem 'libdatadog', force_ruby_platform: true
 gem 'logger'
 gem 'ffi', '1.16.3'

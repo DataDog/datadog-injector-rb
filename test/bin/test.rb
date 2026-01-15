@@ -487,6 +487,21 @@ SUITE = [
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => {
+        { fixture: 'binary' } => [
+          'telemetry should include metadata.tracer_version',
+          'telemetry should include complete',
+          'app gemfile should not include datadog',
+          'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
+          'new gemfile should include datadog',
+          'new lockfile should include datadog',
+          'gem datadog should have require option',
+          'gem nokogiri should have binary resolutions',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
+        ],
         { fixture: 'common' } => [
           'telemetry should include metadata.tracer_version',
           'telemetry should include complete',
@@ -711,7 +726,12 @@ end
 
 example 'gem ffi should have version from app' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(gemfile).grep(/ffi/).any?(%r{1\.17\.0}) rescue nil
+  File.readlines(gemfile).grep(/^\s{4}ffi/).all?(%r{\(1\.17\.\d+.*\)}) rescue nil
+end
+
+example 'gem nokogiri should have binary resolutions' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.readlines(gemfile).grep(/^\s{4}nokogiri/).all?(%r{\(.*-.*\)}) rescue nil
 end
 
 example 'new gemfile should exist' do |context|

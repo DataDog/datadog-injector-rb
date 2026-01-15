@@ -10,17 +10,7 @@ GEM
     datadog-ruby_core_source (3.4.1)
     ffi (1.16.3)
     libdatadog (22.0.1.1.0)
-    libdatadog (22.0.1.1.0-aarch64-linux)
-    libdatadog (22.0.1.1.0-x86_64-linux)
     libddwaf (1.25.1.1.0)
-      ffi (~> 1.0)
-    libddwaf (1.25.1.1.0-aarch64-linux)
-      ffi (~> 1.0)
-    libddwaf (1.25.1.1.0-arm64-darwin)
-      ffi (~> 1.0)
-    libddwaf (1.25.1.1.0-x86_64-darwin)
-      ffi (~> 1.0)
-    libddwaf (1.25.1.1.0-x86_64-linux)
       ffi (~> 1.0)
     logger (1.7.0)
     msgpack (1.8.0)
@@ -35,6 +25,8 @@ PLATFORMS
 DEPENDENCIES
   datadog
   ffi (= 1.16.3)
+  libdatadog
+  libddwaf
 
 BUNDLED WITH
    2.5.23

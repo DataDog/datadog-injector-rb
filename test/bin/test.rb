@@ -1029,6 +1029,9 @@ def main(argv)
           # HACK: default to 'datadog' package for stored metadata (version) to be picked up
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector] || 'datadog'}"
 
+          # HACK: test with local resolution
+          env['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] = 'true' unless group[:resolve] == :remote
+
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 
           pid, status = if lock

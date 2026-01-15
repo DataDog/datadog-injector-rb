@@ -77,11 +77,13 @@ module Patch
         #
         # Aborts when gems are incompatible
         begin
-          @definition.resolve_remotely!
-
-          # TODO: ideally, resolve only locally to avoid hitting remote sources
-          #@definition.sources.local_only!
-          #@definition.resolve
+          # TODO: resolve only locally once we're confident
+          if  ENV['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] == 'true'
+            @definition.send(:sources).local_only!
+            @definition.resolve
+          else
+            @definition.resolve_remotely!
+          end
         rescue StandardError => e
           raise ResolutionError.new("Failed to resolve injected gemfile", e)
         end

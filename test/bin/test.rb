@@ -725,13 +725,13 @@ example 'gem datadog should have require option' do |context|
 end
 
 example 'gem ffi should have version from app' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(gemfile).grep(/^\s{4}ffi/).all?(%r{\(1\.17\.\d+.*\)}) rescue nil
+  lockfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.readlines(lockfile).grep(/^\s{4}ffi/).all?(%r{\(1\.17\.\d+.*\)}) rescue nil
 end
 
 example 'gem nokogiri should have binary resolutions' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(gemfile).grep(/^\s{4}nokogiri/).all?(%r{\(.*-.*\)}) rescue nil
+  lockfile = File.join(context.path, 'datadog.gemfile.lock')
+  File.readlines(lockfile).grep(/^\s{4}nokogiri/).all?(%r{\(.*-.*\)}) rescue nil
 end
 
 example 'new gemfile should exist' do |context|

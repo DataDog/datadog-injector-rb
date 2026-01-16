@@ -82,7 +82,18 @@ module Patch
             @definition.send(:sources).local_only!
             @definition.resolve
           else
-            @definition.resolve_remotely!
+            if Gem::Requirement.new('< 2.4.4').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.resolve_prefering_local!
+            elsif Gem::Requirement.new('< 2.5.11').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.resolution_mode = { 'prefer-local' => true }
+              @definition.resolve_remotely!
+            elsif Gem::Requirement.new('< 2.6.4').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.prefer_local!
+              @definition.resolve_remotely!
+            else
+              @definition.send(:sources).prefer_local!
+              @definition.resolve_remotely!
+            end
           end
         rescue StandardError => e
           raise ResolutionError.new("Failed to resolve injected gemfile", e)

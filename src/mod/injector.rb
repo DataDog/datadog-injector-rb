@@ -78,11 +78,41 @@ module Patch
         # Aborts when gems are incompatible
         begin
           # TODO: resolve only locally once we're confident
-          if  ENV['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] == 'true'
+          if ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] == 'local'
+            # SourceList#local_only! appears to exist consistently so far
+            # - https://github.com/ruby/rubygems/blob/v3.4.0/bundler/lib/bundler/source_list.rb#L143
+            # - https://github.com/ruby/rubygems/blob/v4.0.4/bundler/lib/bundler/source_list.rb#L121
+            # Definition#sources went public on 3.5.23
+            # - https://github.com/ruby/rubygems/commit/0d1252078053879ebc8a69abc243397af46f218a
             @definition.send(:sources).local_only!
             @definition.resolve
           else
-            @definition.resolve_remotely!
+            # Remote resolution with local preference saw many iterations:
+            # - SourceList#prefer_local! appeared on 2.6.4, ultimately replacing Definition#prefer_local!
+            #   https://github.com/ruby/rubygems/commit/209b93ad3679edb79585f831ac4b0046b045ce49
+            #   https://github.com/ruby/rubygems/commit/3df86cd9c640655ec6ec85c1a2280621b56e7b77
+            #   https://github.com/ruby/rubygems/commit/c034f30aa925748cda0967c13e31e25fa73bc5f1
+            # - Definition#prefer_local! appeared on 2.5.11, dropping Definition#resolution_mode=
+            #   https://github.com/ruby/rubygems/commit/639f0b72f40979b552b4bae44a122cfd176115aa
+            #   https://github.com/ruby/rubygems/commit/bed579a49a554b8b205d2b0b5b1e85d356636c2c
+            # - Definition#resolution_mode= appeared on 2.4.4, replacing Definition#resolve_prefering_local!
+            #   https://github.com/ruby/rubygems/commit/47136c6b97c3385a4aea12f0eb0af1ba864f1924
+            #   https://github.com/ruby/rubygems/commit/f8333a735d4c1226261db6d457261567f1021aaa
+            # - Definition#resolve_prefering_local! appeared on 2.3.20
+            #   https://github.com/ruby/rubygems/commit/f0d6d4c57e68b8d6db8c6b979db2866d419c59bd
+            #   https://github.com/ruby/rubygems/commit/9bc5ebeb95204ecfb73e0f5a6181e37742563a4a
+            if Gem::Requirement.new('< 2.4.4').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.resolve_prefering_local!
+            elsif Gem::Requirement.new('< 2.5.11').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.resolution_mode = { 'prefer-local' => true }
+              @definition.resolve_remotely!
+            elsif Gem::Requirement.new('< 2.6.4').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.prefer_local!
+              @definition.resolve_remotely!
+            else
+              @definition.send(:sources).prefer_local!
+              @definition.resolve_remotely!
+            end
           end
         rescue StandardError => e
           raise ResolutionError.new("Failed to resolve injected gemfile", e)
@@ -97,6 +127,9 @@ module Patch
 
         # Dump dependency resolution as a lockfile on disk
         begin
+          # Definition#lock changed signature on 2.5.6
+          # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
+          # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
           if Gem::Requirement.new('< 2.5.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
             @definition.lock(lockfile_path)
           else

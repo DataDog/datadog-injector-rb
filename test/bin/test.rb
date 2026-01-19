@@ -328,6 +328,9 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+
+    [{ resolution: :remote }, { resolution: :local }] => [
+
     { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -547,6 +550,8 @@ SUITE = [
         ]
       }
     }
+
+    ]
   ]
 ]
 
@@ -797,7 +802,7 @@ def resolve_arch(runtime_arches)
   arches_for_platform.find { |arch| runtime_arches.include?(arch) }
 end
 
-def run(*args, engine: nil, version: nil, arch: nil, title: nil)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -822,6 +827,10 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil)
     cmd += %W[
       --interactive --tty
     ] if $stdout.isatty
+
+    cmd += %W[
+      --network none
+    ] unless network
 
     cmd += %W[
       --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
@@ -1050,17 +1059,21 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector] || 'datadog'}"
 
           # HACK: test with local resolution
-          env['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] = 'true' unless group[:resolve] == :remote
+          env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'local' if group[:resolution] == :local
 
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
+
+          network = group[:resolution] != :local
 
           pid, status = if lock
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
+                              network: network,
                               title: 'run fixture stub'
                         else
                           run env, *%W[ ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
+                              network: network,
                               title: 'run fixture stub'
                         end
 

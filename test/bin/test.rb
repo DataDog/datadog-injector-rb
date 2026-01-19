@@ -1055,7 +1055,7 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector] || 'datadog'}"
 
           # HACK: test with local resolution
-          env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'local' if group[:resolution] == :local
+          env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'remote' if group[:resolution] == :remote
 
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 

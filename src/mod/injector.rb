@@ -78,7 +78,7 @@ module Patch
         # Aborts when gems are incompatible
         begin
           # TODO: resolve only locally once we're confident
-          if ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] == 'local'
+          if ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] != 'remote'
             # SourceList#local_only! appears to exist consistently so far
             # - https://github.com/ruby/rubygems/blob/v3.4.0/bundler/lib/bundler/source_list.rb#L143
             # - https://github.com/ruby/rubygems/blob/v4.0.4/bundler/lib/bundler/source_list.rb#L121

@@ -78,7 +78,7 @@ module Patch
         # Aborts when gems are incompatible
         begin
           # TODO: resolve only locally once we're confident
-          if  ENV['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] == 'true'
+          if ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] == 'local'
             @definition.send(:sources).local_only!
             @definition.resolve
           else

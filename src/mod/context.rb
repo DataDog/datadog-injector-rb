@@ -85,7 +85,8 @@ class << self
         :preload => {},
         :ruby => {
           :package => package,
-          :force => Hash[ENV['DD_INTERNAL_RUBY_INJECTOR_FORCE'].tap { |s| break(s && s.split(',').map(&:strip) || []) }.map { |k| [k, true] }]
+          :force => Hash[ENV['DD_INTERNAL_RUBY_INJECTOR_FORCE'].tap { |s| break(s && s.split(',').map(&:strip) || []) }.map { |k| [k, true] }],
+          :resolution => ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] == 'local' ? :local : :remote,
         },
       },
       :ruby => {

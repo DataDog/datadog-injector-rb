@@ -328,6 +328,9 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+
+    [{ resolution: :remote }, { resolution: :local }] => [
+
     { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -547,6 +550,8 @@ SUITE = [
         ]
       }
     }
+
+    ]
   ]
 ]
 
@@ -1050,7 +1055,7 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_BASEPATH'] = "#{INJECTION_DIR}/test/packages/#{group[:injector] || 'datadog'}"
 
           # HACK: test with local resolution
-          env['DD_INTERNAL_RUBY_INJECTOR_LOCAL_RESOLUTION'] = 'true' if group[:resolve] == :local
+          env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'local' if group[:resolution] == :local
 
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 

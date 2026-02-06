@@ -246,10 +246,13 @@ class << self
 
     return [false, nil] unless gemfile
 
-    if context[:bundler][:deployment]
+    mode = :deployment if context[:bundler][:deployment]
+    mode = :vendored if context[:bundler][:settings][:path]
+
+    if mode == :deployment || mode == :vendored
       app_bundle_path = context[:bundler][:bundle_path]
 
-      ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=deployment,path=#{package_gem_home}:#{app_bundle_path}"
+      ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=#{mode},path=#{package_gem_home}:#{app_bundle_path}"
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{app_bundle_path}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
       ENV['GEM_HOME'] = app_bundle_path

@@ -39,12 +39,14 @@ class << self
 
     mod = Module.new do
       def [](name)
-
-        if name == :deployment
-          return false
-        end
+        return false if name == :deployment
+        return nil if name == :path
 
         super
+      end
+
+      def path
+        ::Bundler::Settings::Path.new(nil, true)
       end
     end
 

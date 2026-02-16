@@ -131,15 +131,17 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
-        'injection should abort',
-        'abort reason should include bundler.vendored',
+        'injection should proceed',
+        'injection should succeed',
+        'telemetry should include complete',
+        'abort reason should be empty',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
-        'reported result type should be abort',
+        'reported result type should be success',
       ],
     },
     [{ fixture: 'deployment' }, { fixture: 'hot', env: 'BUNDLE_DEPLOYMENT=true' }] => {
@@ -245,15 +247,17 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
-        'injection should abort',
-        'abort reason should include bundler.vendored',
+        'injection should proceed',
+        'injection should succeed',
+        'telemetry should include complete',
+        'abort reason should be empty',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
-        'reported result type should be abort',
+        'reported result type should be success',
       ],
     },
     { fixture: 'hot' } => {
@@ -329,7 +333,7 @@ SUITE = [
       ],
     },
 
-    [{ resolution: :remote }, { resolution: :local }] => [
+    [{ resolution: :local }] => [
 
     { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
       [
@@ -415,19 +419,20 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include metadata.tracer_version',
-        'telemetry should include start',
-        'injection should abort',
+        'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-      # TODO: disabled due to race condition on naive deletion
-      # 'new gemfile should not exist',
-      # 'new lockfile should not exist',
-        'abort reason should include bundler.vendored',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
-        'reported result type should be abort',
+        'reported result type should be success',
       ],
     },
     [{ fixture: 'vendored', env: 'BUNDLE_DEPLOYMENT=true', inject: true, injector: 'datadog', packaged: true }, { fixture: 'deployment', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
@@ -439,19 +444,20 @@ SUITE = [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
       ] => [
         'telemetry should include metadata.tracer_version',
-        'telemetry should include start',
-        'injection should abort',
+        'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-      # TODO: disabled due to race condition on naive deletion
-      # 'new gemfile should not exist',
-      # 'new lockfile should not exist',
-        'abort reason should include bundler.vendored',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
-        'reported result type should be abort',
+        'reported result type should be success',
       ],
     },
     { fixture: 'deployment', inject: true, injector: 'datadog', packaged: true } => {

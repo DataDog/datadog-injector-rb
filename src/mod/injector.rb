@@ -35,8 +35,17 @@ module Patch
         builder = Bundler::Dsl.new
 
         # Gemfile original contents: read, parse, evaluate
+        #
+        # When @original_gemfile_content is set, the gemfile content is provided
+        # in-memory and eval'd directly, avoiding a filesystem read of
+        # gemfile_path. The gemfile_path is still used for path context
+        # (e.g. relative path resolution in the Gemfile DSL).
         begin
-          builder.eval_gemfile(gemfile_path)
+          if @original_gemfile_content
+            builder.eval_gemfile(gemfile_path, @original_gemfile_content)
+          else
+            builder.eval_gemfile(gemfile_path)
+          end
         rescue StandardError => e
           raise GemfileEvalError.new("Failed to evaluate original gemfile contents", e)
         end
@@ -119,25 +128,50 @@ module Patch
           raise ResolutionError.new("Failed to resolve injected gemfile", e)
         end
 
-        # Append injected gem lines to Gemfile on disk
-        begin
-          append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning]))
-        rescue StandardError => e
-          raise GemfileWriteError.new("Failed to append to gemfile", e)
-        end
-
-        # Dump dependency resolution as a lockfile on disk
-        begin
-          # Definition#lock changed signature on 2.5.6
-          # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
-          # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
-          if Gem::Requirement.new('< 2.5.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
-            @definition.lock(lockfile_path)
-          else
-            @definition.lock
+        if @original_gemfile_content
+          # In-memory mode: capture patched content without filesystem writes
+          #
+          # Gemfile content: original content with injected gem lines appended,
+          # matching the append_to behavior (blank line + gem lines + newline).
+          begin
+            gem_lines = build_gem_lines(@options[:conservative_versioning])
+            @captured_gemfile_content = @original_gemfile_content + "\n" + gem_lines + "\n"
+          rescue StandardError => e
+            raise GemfileWriteError.new("Failed to build patched gemfile content", e)
           end
-        rescue StandardError => e
-          raise LockfileWriteError.new("Failed to write new lockfile", e)
+
+          # Lockfile content: full resolution output from Definition#to_lock,
+          # matching write_lock behavior (trailing newline ensured).
+          begin
+            content = @definition.to_lock
+            content += "\n" unless content.end_with?("\n")
+            @captured_lockfile_content = content
+          rescue StandardError => e
+            raise LockfileWriteError.new("Failed to generate lockfile content", e)
+          end
+        else
+          # Filesystem mode: write patched gemfile and lockfile to disk
+
+          # Append injected gem lines to Gemfile on disk
+          begin
+            append_to(gemfile_path, build_gem_lines(@options[:conservative_versioning]))
+          rescue StandardError => e
+            raise GemfileWriteError.new("Failed to append to gemfile", e)
+          end
+
+          # Dump dependency resolution as a lockfile on disk
+          begin
+            # Definition#lock changed signature on 2.5.6
+            # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
+            # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
+            if Gem::Requirement.new('< 2.5.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
+              @definition.lock(lockfile_path)
+            else
+              @definition.lock
+            end
+          rescue StandardError => e
+            raise LockfileWriteError.new("Failed to write new lockfile", e)
+          end
         end
 
         # Invalidate Bundler.definition
@@ -184,7 +218,7 @@ class << self
     package_lockfile = context[:inject][:ruby][:package][:lockfile]
 
     # TODO: capture stdout+stderr
-    gemfile, err, msg, cause = CONTEXT.isolate do
+    gemfile, gemfile_content, lockfile_content, err, msg, cause = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
@@ -193,23 +227,16 @@ class << self
       app_gemfile  = context[:bundler][:gemfile]
       app_lockfile = context[:bundler][:lockfile]
 
-      # determine output paths
-      out = context[:fs][:target]
-
-      # TODO: hash path + content to detect changes
-      datadog_gemfile  = File.join(out, 'datadog.gemfile')
-      datadog_lockfile = File.join(out, 'datadog.gemfile.lock')
+      # Read original gemfile content into memory
+      begin
+        original_gemfile_content = File.read(app_gemfile)
+      rescue StandardError => e
+        return [nil, nil, nil, *Err.new("fs.read", e).to_a]
+      end
 
       # TODO: this could be gathered in context
       # list gems packaged for injection
       package_locked = Bundler::LockfileParser.new(Bundler.read_file(package_lockfile))
-
-      begin
-        File.write(datadog_gemfile, File.read(app_gemfile))
-        File.write(datadog_lockfile, File.read(app_lockfile))
-      rescue StandardError => e
-        return [nil, *Err.new("fs.write", e).to_a]
-      end
 
       gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec.name)) }.uniq
 
@@ -217,24 +244,36 @@ class << self
       injector = Bundler::Injector.new(gems)
       injector.singleton_class.prepend(Patch::Injector)
 
-      begin
-        injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
+      # Enable in-memory mode: pass original gemfile content so that inject
+      # captures patched gemfile and lockfile content without filesystem writes.
+      # The app_gemfile path is still used for DSL path context (relative path
+      # resolution etc.) and the app_lockfile is read from disk during
+      # resolution by Definition.initialize via Bundler.read_file.
+      injector.instance_variable_set(:@original_gemfile_content, original_gemfile_content)
 
-        [datadog_gemfile, nil]
+      begin
+        injector.inject(Pathname.new(app_gemfile), Pathname.new(app_lockfile))
+
+        [
+          app_gemfile,
+          injector.instance_variable_get(:@captured_gemfile_content),
+          injector.instance_variable_get(:@captured_lockfile_content),
+          nil
+        ]
       rescue Patch::Injector::GemfileEvalError => e
-        [nil, *Err.new("bundler.inject.gemfile.eval", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.gemfile.eval", e).to_a]
       rescue Patch::Injector::GemfileInjectError => e
-        [nil, *Err.new("bundler.inject.gemfile.inject", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.gemfile.inject", e).to_a]
       rescue Patch::Injector::ResolutionError => e
-        [nil, *Err.new("bundler.inject.resolve", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.resolve", e).to_a]
       rescue Patch::Injector::GemfileWriteError => e
-        [nil, *Err.new("bundler.inject.gemfile.write", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.gemfile.write", e).to_a]
       rescue Patch::Injector::LockfileWriteError => e
-        [nil, *Err.new("bundler.inject.lockfile.write", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.lockfile.write", e).to_a]
       rescue Patch::Injector::InjectionError => e
-        [nil, *Err.new("bundler.inject", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject", e).to_a]
       rescue StandardError => e
-        [nil, *Err.new("bundler.inject.unknown", e).to_a]
+        [nil, nil, nil, *Err.new("bundler.inject.unknown", e).to_a]
       end
     end
 
@@ -246,6 +285,23 @@ class << self
     end
 
     return [false, nil] unless gemfile
+
+    # Store captured in-memory content in env vars so that Bundler can be
+    # patched to return these contents on any future read of the gemfile or
+    # lockfile, both in this process and in exec'd child processes.
+    #
+    # NOTE: env var total size is limited (~1-2MB depending on OS). Extremely
+    # large lockfiles may exceed this. If that becomes an issue, consider
+    # compressing or using a tempfile fallback.
+    if gemfile_content && lockfile_content
+      ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT'] = gemfile_content
+      ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT'] = lockfile_content
+    end
+
+    # Set BUNDLE_GEMFILE to the original app gemfile path. Bundler will use
+    # this to derive gemfile and lockfile paths, but actual reads will be
+    # intercepted by patch_reads! to return the in-memory patched content.
+    ENV['BUNDLE_GEMFILE'] = gemfile
 
     # Detect vendored or deployment mode.
     #
@@ -316,9 +372,11 @@ class << self
       # deployment/path restrictions to neutralize.
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
-    end
 
-    ENV['BUNDLE_GEMFILE'] = gemfile
+      # Install read interceptors for non-deployment mode too, so that
+      # Bundler.setup reads the patched gemfile/lockfile from memory.
+      BUNDLER.patch_reads!
+    end
 
     [true, nil]
   end

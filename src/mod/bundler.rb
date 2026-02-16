@@ -97,6 +97,48 @@ class << self
     end
 
     ::Bundler::CLI::Exec.prepend mod
+
+    # Install read interceptors so Bundler returns patched in-memory content
+    # for the gemfile and lockfile instead of reading from disk.
+    patch_reads!
+  end
+
+  # Patch Bundler.read_file to return in-memory gemfile and lockfile content.
+  #
+  # When DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT and
+  # DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT env vars are set, any call
+  # to Bundler.read_file for the gemfile or lockfile path will return the
+  # env var content instead of reading from disk. This allows the injector
+  # to perform resolution without writing patched files to the filesystem.
+  #
+  # The gemfile and lockfile paths are derived from BUNDLE_GEMFILE (via
+  # Bundler.default_gemfile / Bundler.default_lockfile), so BUNDLE_GEMFILE
+  # must be set before calling this method.
+  def patch_reads!
+    gemfile_content  = ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT']
+    lockfile_content = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT']
+
+    return unless gemfile_content && lockfile_content
+
+    require!
+
+    gemfile_path  = ::Bundler.default_gemfile.to_s
+    lockfile_path = ::Bundler.default_lockfile.to_s
+
+    mod = Module.new do
+      define_method(:read_file) do |file|
+        case file.to_s
+        when gemfile_path
+          gemfile_content
+        when lockfile_path
+          lockfile_content
+        else
+          super(file)
+        end
+      end
+    end
+
+    ::Bundler.singleton_class.prepend(mod)
   end
 
   private

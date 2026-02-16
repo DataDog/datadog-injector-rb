@@ -362,6 +362,8 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -414,6 +416,8 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -440,6 +444,8 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -466,6 +472,8 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -492,6 +500,8 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -519,6 +529,8 @@ SUITE = [
           'new lockfile should exist',
           'new gemfile should include datadog',
           'new lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem nokogiri should have binary resolutions',
           'telemetry start should not include result report',
@@ -534,6 +546,8 @@ SUITE = [
           'new lockfile should exist',
           'new gemfile should include datadog',
           'new lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem ffi should have version from app',
           'telemetry start should not include result report',
@@ -562,6 +576,8 @@ SUITE = [
           'new lockfile should exist',
           'new gemfile should include datadog',
           'new lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem ffi should have version from app',
           'telemetry start should not include result report',
@@ -734,6 +750,10 @@ example 'app lockfile should not include datadog' do |context|
   !File.read(lockfile).include?(' datadog ') rescue nil
 end
 
+# NOTE: datadog.gemfile and datadog.gemfile.lock are persisted by the stub
+# from in-memory content (Bundler.read_file via patch_reads!) for test
+# verification. The injector itself no longer writes these files to disk.
+
 example 'new gemfile should include datadog' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
   File.read(gemfile).include?('gem "datadog"') rescue nil
@@ -777,6 +797,23 @@ end
 example 'new lockfile should not exist' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   !File.exist?(lockfile)
+end
+
+# Verify in-memory content (returned by Bundler.read_file via patch_reads!)
+# differs from the original on-disk gemfile/lockfile. The persisted
+# datadog.gemfile / datadog.gemfile.lock are written by the stub from
+# the intercepted Bundler.read_file output.
+
+example 'gemfile should be patched in memory' do |context|
+  original = File.join(context.path, 'Gemfile')
+  patched = File.join(context.path, 'datadog.gemfile')
+  File.exist?(patched) && File.read(original) != File.read(patched) rescue nil
+end
+
+example 'lockfile should be patched in memory' do |context|
+  original = File.join(context.path, 'Gemfile.lock')
+  patched = File.join(context.path, 'datadog.gemfile.lock')
+  File.exist?(patched) && File.read(original) != File.read(patched) rescue nil
 end
 
 RUNTIMES = {

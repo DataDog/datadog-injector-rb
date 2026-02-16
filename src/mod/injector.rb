@@ -246,19 +246,73 @@ class << self
 
     return [false, nil] unless gemfile
 
+    # Detect vendored or deployment mode.
+    #
+    # Vendored mode: BUNDLE_PATH is set (via env, .bundle/config, etc.),
+    # causing Bundler to install and load gems from that specific directory
+    # rather than the system gem path. This is the general case.
+    #
+    # Deployment mode: BUNDLE_DEPLOYMENT is set, which implies vendored mode
+    # (Bundler defaults BUNDLE_PATH to "vendor/bundle") and additionally
+    # freezes the Gemfile and lockfile.
+    #
+    # Vendored is checked last so it takes precedence: when both are set,
+    # the explicit BUNDLE_PATH matters more than the deployment default.
     mode = :deployment if context[:bundler][:deployment]
     mode = :vendored if context[:bundler][:settings][:path]
 
+    # In vendored or deployment mode, Bundler restricts gem loading to the
+    # bundle path. The injected gems live in the package gem home, not in
+    # the app's bundle path, so we must:
+    #
+    # 1. Set GEM_PATH to include both the package gem home (where injected
+    #    gems are installed) and the app's bundle path (where app gems are
+    #    installed), so RubyGems can find gems from both locations.
+    #
+    # 2. Set GEM_HOME to the app's bundle path so that any gem installation
+    #    goes to the expected location.
+    #
+    # 3. Patch Bundler settings (via BUNDLER.patch!) to neutralize the
+    #    deployment flag and the path setting, preventing Bundler from
+    #    complaining about gemfile/lockfile changes or restricting gem
+    #    activation to only the bundle path. See bundler.rb patch! for
+    #    details on what gets patched.
+    #
+    # 4. Persist the mode and paths in DD_INTERNAL_RUBY_INJECTOR_PATCH so
+    #    that child processes (e.g. via `bundle exec`) can re-apply the
+    #    patch. See main.rb's re-entry path.
     if mode == :deployment || mode == :vendored
       app_bundle_path = context[:bundler][:bundle_path]
 
       ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH'] = "mode=#{mode},path=#{package_gem_home}:#{app_bundle_path}"
+
+      # Reset RubyGems' in-memory path state so gems from both locations are
+      # discoverable in the current process. Gem.paths= calls clear_paths and
+      # builds a new PathSupport from ENV.to_hash merged with the given hash.
+      # PathSupport#split_gem_path splits GEM_PATH, appends GEM_HOME, and
+      # deduplicates. Note: Gem.paths= does NOT modify ENV — it only sets
+      # the in-memory @paths and updates Gem::Specification.dirs.
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{app_bundle_path}" }
+
+      # Persist the fully resolved Gem.path to ENV for child processes.
+      # Gem.path may include additional entries beyond what we explicitly set
+      # (e.g. the current GEM_HOME appended by PathSupport), so we read it
+      # back rather than recomputing it.
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
+
+      # Set GEM_HOME in ENV for child processes. This does not reset @paths
+      # or Gem.dir in the current process, but child processes (and any
+      # future Gem.paths reset) will resolve GEM_HOME to the app's bundle
+      # path, where app gems are installed.
       ENV['GEM_HOME'] = app_bundle_path
 
       BUNDLER.patch!
     else
+      # Non-vendored mode: Bundler uses system gems (no BUNDLE_PATH set),
+      # so we only need to prepend the package gem home to the existing
+      # GEM_PATH. No GEM_HOME override is needed (system default is fine),
+      # and no Bundler settings patch is needed since there are no
+      # deployment/path restrictions to neutralize.
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
     end

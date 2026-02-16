@@ -37,6 +37,38 @@ class << self
   def patch!
     require!
 
+    # Patch Bundler::Settings to neutralize deployment and vendored mode
+    # restrictions so that Bundler doesn't complain about gemfile/lockfile
+    # changes made by the injector or restrict gem activation.
+    #
+    # Two things need patching:
+    #
+    # 1. Settings#[] — intercepted for :deployment and :path.
+    #
+    #    :deployment (BOOL_KEYS) is returned as false so Bundler doesn't
+    #    enforce frozen gemfile/lockfile checks at runtime.
+    #
+    #    :path (STRING_KEYS) is returned as nil so any direct readers
+    #    (e.g. Bundler.settings[:path]) see no explicit path configured.
+    #    However, Settings#[] alone is NOT sufficient for :path because
+    #    Settings#path (the method) reads from config hashes directly via
+    #    value_for(), bypassing #[]. That's why we also need (2).
+    #
+    # 2. Settings#path (the method) — overridden to return Path.new(nil, true).
+    #
+    #    Bundler.bundle_path is derived from settings.path via
+    #    Bundler.configured_bundle_path. The original Settings#path iterates
+    #    over config levels (temporary, local, env, global) using value_for()
+    #    to find the "path" setting, and falls back to "vendor/bundle" when
+    #    deployment mode is on:
+    #
+    #    - https://github.com/ruby/rubygems/blob/v3.6.2/bundler/lib/bundler/settings.rb#L252-L265
+    #
+    #    By returning Path.new(nil, true) (no explicit_path, system_path=true),
+    #    Path#use_system_gems? returns true, and Path#base_path falls through
+    #    to Bundler.rubygems.gem_dir (i.e. Gem.dir), which is governed by
+    #    GEM_HOME/GEM_PATH that we've already set up in injector.rb to include
+    #    both the package gem home and the app's bundle path.
     mod = Module.new do
       def [](name)
         return false if name == :deployment

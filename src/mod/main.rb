@@ -77,6 +77,14 @@ unless context_status.nil?
         bundler.patch!
       else
         log.info { 'inject:skip' }
+
+        # Even without deployment/vendored patches, install read interceptors
+        # so Bundler reads the patched gemfile/lockfile content from env vars
+        # (set during the initial injection in the parent process).
+        if ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT'] && ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT']
+          bundler = import 'bundler'
+          bundler.patch_reads!
+        end
       end
 
       telemetry.emit([

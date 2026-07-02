@@ -73,6 +73,7 @@ SUITE = [
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
       { engine: 'ruby', version: '3.5' },
+      { engine: 'ruby', version: '4.0' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -106,6 +107,7 @@ SUITE = [
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
       { engine: 'ruby', version: '3.5' },
+      { engine: 'ruby', version: '4.0' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -132,6 +134,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -154,6 +157,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -176,6 +180,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -248,6 +253,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -320,6 +326,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -345,6 +352,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -370,6 +378,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -395,6 +404,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -420,6 +430,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -445,6 +456,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -470,6 +482,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -495,6 +508,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => {
         { fixture: 'binary' } => [
           'telemetry should include metadata.tracer_version',
@@ -783,6 +797,7 @@ RUNTIMES = {
     '3.3' => { tag: '3.3-centos', arch: ['aarch64', 'x86_64'] },
     '3.4' => { tag: '3.4-centos', arch: ['aarch64', 'x86_64'] },
     '3.5' => { tag: '3.5-centos', arch: ['aarch64', 'x86_64'] },
+    '4.0' => { tag: '4.0-centos', arch: ['aarch64', 'x86_64'] },
   },
   'jruby' => {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },

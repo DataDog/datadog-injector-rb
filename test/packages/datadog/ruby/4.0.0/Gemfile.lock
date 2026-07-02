@@ -1,0 +1,34 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    cgi (0.5.2)
+    datadog (2.36.0)
+      cgi
+      datadog-ruby_core_source (~> 3.5, >= 3.5.2)
+      libdatadog (~> 35.0.0.1.0)
+      libddwaf (~> 1.30.0.0.0)
+      logger
+      msgpack
+    datadog-ruby_core_source (3.5.2)
+    ffi (1.16.3)
+    libdatadog (35.0.0.1.0)
+    libddwaf (1.30.0.0.2)
+      ffi (~> 1.0)
+    logger (1.7.0)
+    msgpack (1.8.3)
+
+PLATFORMS
+  aarch64-linux
+  arm64-darwin
+  ruby
+  x86_64-darwin
+  x86_64-linux
+
+DEPENDENCIES
+  datadog
+  ffi (= 1.16.3)
+  libdatadog
+  libddwaf
+
+BUNDLED WITH
+   4.0.14

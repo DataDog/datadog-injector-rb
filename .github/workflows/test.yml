@@ -60,6 +60,8 @@ jobs:
             version: "3.4"
           - engine: ruby
             version: "3.5"
+          - engine: ruby
+            version: "4.0"
           - engine: jruby
             version: "9.2"
           - engine: jruby

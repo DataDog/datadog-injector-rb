@@ -95,6 +95,7 @@ class << self
         :engine => RUBY.engine,
         :engine_version => RUBY.engine_version,
         :platform => RUBY.platform,
+        :prerelease => RUBY.prerelease?,
       },
       :process => {
         :exe => PROCESS.exe,

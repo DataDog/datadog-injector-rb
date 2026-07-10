@@ -12,7 +12,7 @@ class << self
       result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 
-    if !status[:inject][:ruby][:force]['ruby.version'] && min(status[:ruby][:version], 3, 5, 0) && lower(status[:ruby][:version], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['ruby.version'] && status[:ruby][:prerelease]
       result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 

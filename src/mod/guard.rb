@@ -36,6 +36,14 @@ class << self
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
+    if !status[:inject][:ruby][:force]['rubygems.version'] && min(status[:bundler][:rubygems], 5, 0, 0)
+      result << { :name => 'rubygems.version', :reason => 'rubygems.version', :value => status[:bundler][:rubygems] }
+    end
+
+    if !status[:inject][:ruby][:force]['bundler.version'] && min(status[:bundler][:version], 5, 0, 0)
+      result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
+    end
+
     if !status[:inject][:ruby][:force]['bundler.version.simulated'] && min(status[:bundler][:simulate_version], 5, 0, 0)
       result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated', :value => status[:bundler][:simulate_version] }
     end

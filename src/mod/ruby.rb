@@ -20,6 +20,13 @@ def self.platform
   RUBY_PLATFORM
 end
 
+# Whether this is a prerelease build (preview, rc, or dev) rather than a
+# final release. Final releases have RUBY_PATCHLEVEL >= 0; prereleases use -1.
+# Version-agnostic: e.g. Ruby 3.5 only ever shipped as previews.
+def self.prerelease?
+  defined?(RUBY_PATCHLEVEL) && RUBY_PATCHLEVEL == -1
+end
+
 def self.api_version
   require 'rbconfig' unless defined?(RbConfig)
 

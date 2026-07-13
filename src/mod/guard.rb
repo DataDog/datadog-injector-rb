@@ -12,9 +12,12 @@ class << self
       result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 
-    # actually, exclude all previews?
-    if !status[:inject][:ruby][:force]['ruby.version'] && min(status[:ruby][:version], 3, 5)
-      result << { :name => 'ruby.version', :reason => 'runtime.version' , :value => status[:ruby][:version]}
+    if !status[:inject][:ruby][:force]['ruby.version'] && status[:ruby][:prerelease]
+      result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
+    end
+
+    if !status[:inject][:ruby][:force]['ruby.version'] && min(status[:ruby][:version], 4, 1, 0)
+      result << { :name => 'ruby.version', :reason => 'runtime.version', :value => status[:ruby][:version] }
     end
 
     if !status[:inject][:ruby][:force]['ruby.engine'] && status[:ruby][:engine] != 'ruby'
@@ -33,15 +36,15 @@ class << self
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if !status[:inject][:ruby][:force]['rubygems.version'] && min(status[:bundler][:rubygems], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['rubygems.version'] && min(status[:bundler][:rubygems], 5, 0, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version', :value => status[:bundler][:rubygems] }
     end
 
-    if !status[:inject][:ruby][:force]['bundler.version'] && min(status[:bundler][:version], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version'] && min(status[:bundler][:version], 5, 0, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if !status[:inject][:ruby][:force]['bundler.version.simulated'] && min(status[:bundler][:simulate_version], 4, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version.simulated'] && min(status[:bundler][:simulate_version], 5, 0, 0)
       result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated', :value => status[:bundler][:simulate_version] }
     end
 

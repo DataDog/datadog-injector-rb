@@ -73,6 +73,7 @@ SUITE = [
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
       { engine: 'ruby', version: '3.5' },
+      { engine: 'ruby', version: '4.0' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -106,6 +107,7 @@ SUITE = [
       { engine: 'ruby', version: '3.3' },
       { engine: 'ruby', version: '3.4' },
       { engine: 'ruby', version: '3.5' },
+      { engine: 'ruby', version: '4.0' },
       { engine: 'jruby', version: '9.2' },
       { engine: 'jruby', version: '9.3' },
       { engine: 'jruby', version: '9.4' },
@@ -132,6 +134,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -154,6 +157,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -176,6 +180,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -248,6 +253,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -320,6 +326,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -345,6 +352,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -370,6 +378,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include start',
@@ -395,6 +404,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -420,6 +430,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -445,6 +456,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -470,6 +482,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
@@ -495,6 +508,7 @@ SUITE = [
         { engine: 'ruby', version: '3.3' },
         { engine: 'ruby', version: '3.4' },
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
       ] => {
         { fixture: 'binary' } => [
           'telemetry should include metadata.tracer_version',
@@ -783,6 +797,7 @@ RUNTIMES = {
     '3.3' => { tag: '3.3-centos', arch: ['aarch64', 'x86_64'] },
     '3.4' => { tag: '3.4-centos', arch: ['aarch64', 'x86_64'] },
     '3.5' => { tag: '3.5-centos', arch: ['aarch64', 'x86_64'] },
+    '4.0' => { tag: '4.0-centos', arch: ['aarch64', 'x86_64'] },
   },
   'jruby' => {
     '9.2' => { tag: '9.2-gnu', arch: ['aarch64', 'x86_64'] },
@@ -806,6 +821,18 @@ end
 
 def resolve_arch(runtime_arches)
   arches_for_platform.find { |arch| runtime_arches.include?(arch) }
+end
+
+# Wrap a command so it runs under devtoolset-10 (gcc 10) when the image ships it.
+#
+# CentOS-based images (e.g. Ruby 4.0) compile Ruby with devtoolset-10 but leave the
+# old system gcc (4.8) as the runtime default. Native gem builds then fail on the
+# gcc-10 warnflags baked into Ruby's CFLAGS (e.g. -Wduplicated-cond). Sourcing the
+# SCL enable script puts gcc 10 on PATH; it's a no-op where the script is absent.
+#
+# TODO: remove once images-rb defaults the runtime toolchain to devtoolset-10.
+def with_toolchain(*args)
+  ['sh', '-c', 'if [ -f /opt/rh/devtoolset-10/enable ]; then . /opt/rh/devtoolset-10/enable; fi; exec "$@"', 'sh', *args]
 end
 
 def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
@@ -1007,7 +1034,7 @@ def main(argv)
         package_gem_home = "#{package_basepath}/ruby/#{group[:version]}.0" + (group[:version] == '3.5' ? '+0' : '')
 
         env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home, 'BUNDLE_PATH' => package_basepath, 'BUNDLE_APP_CONFIG' => '/nowhere' }
-        pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'package injection gems'
+        pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'package injection gems'
         if status.exitstatus != 0
           puts "╭─────┈┄╌"
           puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1023,7 +1050,7 @@ def main(argv)
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
-            pid, status = run env, *%W[ bundle lock ], engine: group[:engine], version: group[:version], title: 'lock fixture'
+            pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
               puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1039,7 +1066,7 @@ def main(argv)
                   else
                     {}
                   end
-            pid, status = run env, *%W[ bundle install ], engine: group[:engine], version: group[:version], title: 'install fixture'
+            pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
               puts "│ ERR: #{group.inspect} uuid: #{uuid}"

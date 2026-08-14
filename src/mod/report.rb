@@ -20,6 +20,8 @@ class << self
 
     # error reasons
     when 'bundler.inject'                then 'incompatible_dependency'
+    when 'bundler.direct.resolve'        then 'incompatible_dependency'
+    when /^bundler\.direct\./            then 'internal_error'
 
     # fallback
     else                                      'unknown'
@@ -62,6 +64,12 @@ class << self
     # error reasons
     when 'bundler.inject'
       'A dependency was found to be incompatible'
+    when 'bundler.direct.resolve'
+      'The activated application bundle is incompatible with direct injection'
+    when 'bundler.direct.setup'
+      'The application bundle could not be activated for direct injection'
+    when 'bundler.direct.load'
+      'Datadog could not be loaded directly from the injection package'
 
     # fallback
     else

@@ -60,7 +60,7 @@ class << self
       result << { :name => 'bundler.platform.ruby', :reason => 'bundler.platform.forced' }
     end
 
-    if !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
+    if !status[:inject][:ruby][:direct] && !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
     end
 

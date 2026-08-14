@@ -86,6 +86,7 @@ class << self
         :ruby => {
           :package => package,
           :force => Hash[ENV['DD_INTERNAL_RUBY_INJECTOR_FORCE'].tap { |s| break(s && s.split(',').map(&:strip) || []) }.map { |k| [k, true] }],
+          :direct => ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] == 'true',
           :resolution => ENV['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] == 'remote' ? :remote : :local,
         },
       },

@@ -3,6 +3,7 @@
 LOG = import 'log'
 CONTEXT = import 'context'
 BUNDLER = import 'bundler'
+DIRECT = import 'direct'
 
 module Patch
   module Injector
@@ -177,6 +178,8 @@ class << self
   def call(context)
     LOG.info { "injector:call context:#{context}" }
 
+    return call_direct(context) if context[:inject][:ruby][:direct]
+
     # TODO: check if nested injection (maybe very early too)
     # TODO: check if injection already performed
 
@@ -321,6 +324,21 @@ class << self
     ENV['BUNDLE_GEMFILE'] = gemfile
 
     [true, nil]
+  end
+
+  def call_direct(context)
+    begin
+      [DIRECT.call(context), nil]
+    rescue DIRECT::SetupError => e
+      LOG.debug { "injector:error code:bundler.direct.setup msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.setup']
+    rescue DIRECT::ResolutionError => e
+      LOG.debug { "injector:error code:bundler.direct.resolve msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.resolve']
+    rescue DIRECT::LoadError => e
+      LOG.debug { "injector:error code:bundler.direct.load msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.load']
+    end
   end
 
   def options_for(name)

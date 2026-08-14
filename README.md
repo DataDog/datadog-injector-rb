@@ -56,6 +56,18 @@ ruby your_application.rb
 bundle exec ruby your_application.rb
 ```
 
+### Experimental direct loading
+
+Set `DD_INTERNAL_RUBY_INJECTOR_DIRECT=true` to load the packaged Datadog gem
+without generating an injected Gemfile or lockfile and without patching Bundler.
+The injector activates the application bundle normally, reuses compatible gems
+already activated by the application, and adds missing dependencies directly
+from the injection package.
+
+Direct loading fails before loading Datadog when an application gem conflicts
+with the packaged dependency graph. This mode is experimental and is intended
+for testing read-only filesystem support.
+
 ## Project Structure
 
 - `/src`: Contains the main injector code

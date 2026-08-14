@@ -342,6 +342,104 @@ SUITE = [
 
     [{ resolution: :local }] => [
 
+    [
+      { fixture: 'direct', inject: true, injector: 'datadog', packaged: true, direct: true, read_only: true },
+      { fixture: 'direct', inject: true, injector: 'datadog', packaged: true, direct: true, read_only: true, entrypoint: 'ruby' },
+    ] => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'common', inject: true, injector: 'datadog', packaged: true, direct: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'vendored', inject: true, injector: 'datadog', packaged: true, direct: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'conflict', inject: true, injector: 'datadog', packaged: true, direct: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '2.7' },
+        { engine: 'ruby', version: '3.0' },
+        { engine: 'ruby', version: '3.1' },
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '3.3' },
+        { engine: 'ruby', version: '3.4' },
+        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include error',
+        'error reason should include bundler.direct.resolve',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be error',
+        'reported result class should be incompatible_dependency',
+      ],
+    },
+
     { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -724,6 +822,10 @@ example 'error reason should include bundler.inject.resolve' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' && p['tags'].include?('reason:bundler.inject.resolve') } }
 end
 
+example 'error reason should include bundler.direct.resolve' do |context|
+  context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' && p['tags'].include?('reason:bundler.direct.resolve') } }
+end
+
 example 'app gemfile should not include datadog' do |context|
   gemfile = File.join(context.path, 'Gemfile')
   !File.read(gemfile).include?('gem "datadog"') rescue nil
@@ -835,7 +937,7 @@ def with_toolchain(*args)
   ['sh', '-c', 'if [ -f /opt/rh/devtoolset-10/enable ]; then . /opt/rh/devtoolset-10/enable; fi; exec "$@"', 'sh', *args]
 end
 
-def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true, read_only: false)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -870,7 +972,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
       --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
       --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
       --volume datadog-injector-rb-bundle-path-#{engine}-#{tag}-#{arch}:/bundle:rw
-      --volume #{Dir.pwd}:#{Dir.pwd}:rw
+      --volume #{Dir.pwd}:#{Dir.pwd}:#{read_only ? 'ro' : 'rw'}
       --workdir #{Dir.pwd}
       --platform linux/#{arch}
     ]
@@ -1093,20 +1195,23 @@ def main(argv)
 
           # test with local resolution by default
           env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'remote' if group[:resolution] == :remote
+          env['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] = 'true' if group[:direct]
 
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
 
           network = group[:resolution] == :remote
 
-          pid, status = if lock
+          pid, status = if lock && group[:entrypoint] != 'ruby'
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,
+                              read_only: group[:read_only],
                               title: 'run fixture stub'
                         else
                           run env, *%W[ ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,
+                              read_only: group[:read_only],
                               title: 'run fixture stub'
                         end
 

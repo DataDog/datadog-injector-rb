@@ -62,10 +62,18 @@ Set `DD_INTERNAL_RUBY_INJECTOR_DIRECT=true` to load the packaged Datadog gem
 without generating an injected Gemfile or lockfile and without patching Bundler.
 The injector activates the application bundle normally, reuses compatible gems
 already activated by the application, and adds missing dependencies directly
-from the injection package.
+from the application bundle or injection package. It uses a deterministic
+backtracking resolver across the application bundle and every dependency version
+installed in the injection package. It prefers the package lockfile's versions,
+then backtracks to packaged alternatives when needed, and validates Ruby,
+RubyGems, platform, and transitive dependency constraints before changing the
+process. Datadog SDK candidates remain limited to the package lockfile; an SDK
+already activated by the application is immutable like every other loaded gem.
 
 Direct loading fails before loading Datadog when an application gem conflicts
-with the packaged dependency graph. This mode is experimental and is intended
+with the packaged dependency graph, a required platform build is absent, or the
+package does not contain any satisfiable dependency set. Already activated gems
+cannot be replaced safely in-process. This mode is experimental and is intended
 for testing read-only filesystem support.
 
 ## Project Structure

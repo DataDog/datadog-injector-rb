@@ -1,5 +1,7 @@
 INJECTION_DIR = File.expand_path(File.join(__dir__, '..', '..'))
 
+require_relative 'resolver_test'
+
 # Idealised syntax
 #
 # fixture:unbundled

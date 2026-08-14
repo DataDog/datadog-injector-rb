@@ -1,6 +1,7 @@
 # ruby-version-min: 1.8.7
 
 BUNDLER = import 'bundler'
+RESOLVER = import 'resolver'
 
 class DirectError < StandardError
   attr_reader :cause
@@ -26,8 +27,8 @@ class << self
 
     setup_bundle
 
-    selected, packaged = resolve(package[:gem_home], package[:lockfile])
-    activate(selected, packaged)
+    selected = resolve(package[:gem_home], package[:lockfile])
+    activate(selected)
 
     true
   end
@@ -52,18 +53,16 @@ class << self
   def resolve(gem_home, lockfile)
     begin
       locked = Bundler::LockfileParser.new(Bundler.read_file(lockfile))
-      available = load_package_specs(gem_home, locked.specs)
-      selected = {}
-      packaged = {}
+      available = load_candidates(gem_home, locked.specs)
       datadog = locked.dependencies['datadog']
 
       unless datadog
         raise ResolutionError.new('The injection package does not declare a datadog dependency')
       end
 
-      resolve_dependency(datadog, 'injection package', available, selected, packaged)
-
-      [selected, packaged]
+      RESOLVER::Resolver.new(available, Gem.loaded_specs).resolve(datadog)
+    rescue RESOLVER::Conflict => e
+      raise ResolutionError.new(e.message, e)
     rescue DirectError
       raise
     rescue StandardError => e
@@ -71,80 +70,66 @@ class << self
     end
   end
 
-  def load_package_specs(gem_home, locked_specs)
-    locked = {}
-    locked_specs.each { |spec| locked[[spec.name, spec.version.to_s]] = true }
-
+  def load_candidates(gem_home, locked_specs)
     available = {}
-    pattern = File.join(gem_home, 'specifications', '*.gemspec')
 
-    Dir[pattern].sort.each do |path|
-      spec = Gem::Specification.load(path)
-      next unless spec
-      next unless locked[[spec.name, spec.version.to_s]]
+    Bundler.load.specs.each do |spec|
+      # Datadog comes from the selected injection package. An application copy
+      # that is already active is still treated as immutable by the resolver.
+      next if spec.name == 'datadog'
 
-      available[spec.name] ||= []
-      available[spec.name] << spec
+      add_candidate(available, spec, :application)
+    end
+
+    load_package_candidates(gem_home, locked_specs).each do |candidate|
+      add_candidate(available, candidate[:spec], candidate[:source])
     end
 
     available
   end
 
-  def resolve_dependency(dependency, parent, available, selected, packaged)
-    if (spec = selected[dependency.name])
-      validate_requirement(dependency, parent, spec)
-      return spec
+  def load_package_candidates(gem_home, locked_specs)
+    locked = {}
+    locked_specs.each { |spec| locked[[spec.name, spec.version.to_s]] = true }
+
+    candidates = []
+    pattern = File.join(gem_home, 'specifications', '*.gemspec')
+
+    Dir[pattern].sort.each do |path|
+      spec = Gem::Specification.load(path)
+      next unless spec
+
+      is_locked = locked[[spec.name, spec.version.to_s]]
+
+      # The requested Datadog version is canonical, but additional packaged
+      # dependency versions are valid alternatives for the local resolver.
+      next if spec.name == 'datadog' && !is_locked
+
+      candidates << { :spec => spec, :source => (is_locked ? :package_locked : :package) }
     end
 
-    if (spec = Gem.loaded_specs[dependency.name])
-      validate_requirement(dependency, parent, spec)
-      selected[dependency.name] = spec
-      return spec
-    end
-
-    candidates = available[dependency.name] || []
-    spec = candidates.find { |candidate| dependency.requirement.satisfied_by?(candidate.version) }
-
-    unless spec
-      raise ResolutionError.new("#{parent} requires #{dependency}, but the injection package does not provide it")
-    end
-
-    validate_runtime(spec)
-
-    selected[dependency.name] = spec
-    packaged[dependency.name] = spec
-
-    spec.runtime_dependencies.each do |child|
-      resolve_dependency(child, spec.full_name, available, selected, packaged)
-    end
-
-    spec
+    candidates
   end
 
-  def validate_requirement(dependency, parent, spec)
-    return if dependency.requirement.satisfied_by?(spec.version)
-
-    raise ResolutionError.new("#{parent} requires #{dependency}, but #{spec.full_name} is already selected")
-  end
-
-  def validate_runtime(spec)
-    unless spec.required_ruby_version.satisfied_by?(Gem.ruby_version)
-      raise ResolutionError.new("#{spec.full_name} does not support Ruby #{Gem.ruby_version}")
+  def add_candidate(available, spec, source)
+    available[spec.name] ||= []
+    duplicate = available[spec.name].any? do |candidate|
+      candidate[:spec].version == spec.version && candidate[:spec].platform == spec.platform
     end
-
-    return if spec.required_rubygems_version.satisfied_by?(Gem::Version.new(Gem::VERSION))
-
-    raise ResolutionError.new("#{spec.full_name} does not support RubyGems #{Gem::VERSION}")
+    available[spec.name] << { :spec => spec, :source => source } unless duplicate
   end
 
-  def activate(selected, packaged)
-    datadog = selected['datadog']
+  def activate(selected)
+    datadog = selected['datadog'] && selected['datadog'][:spec]
     raise ResolutionError.new('The injection package does not resolve a datadog gem') unless datadog
 
     added_paths = []
     previous_specs = {}
 
-    packaged.each_value do |spec|
+    selected.each_value do |candidate|
+      next if candidate[:source] == :loaded
+
+      spec = candidate[:spec]
       spec.full_require_paths.each do |path|
         next if $LOAD_PATH.include?(path)
 

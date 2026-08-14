@@ -41,17 +41,24 @@ module Patch
           raise GemfileEvalError.new("Failed to evaluate original gemfile contents", e)
         end
 
-        # Filter out dependencies to inject based on presence in original Gemfile
+        # Preserve dependencies already resolved by the application. The package
+        # lockfile contains exact versions for the complete injection bundle, but
+        # adding those versions as direct dependencies can override compatible
+        # transitive versions from the application lockfile.
         #
-        # TODO: this should
-        # - build list of app deps:
-        #   `original_definition = builder.to_definition(lockfile_path, {})`
-        # - for each new gem dep, if in active app gems then remove dep by name:
-        #   `original_definition.specs.find { |s| s.name == 'ffi' }`
-        # - else if in inactive deps => abort?:
-        #   `original_definition.current_dependencies.find { |dep| dep.name == 'ffi'}`
-        # - else keep it
-        @deps.reject! { |d| builder.dependencies.any? { |dep| dep.name == d.name } }
+        # Direct Gemfile dependencies are included as well because a dependency
+        # may be inactive on the current platform and therefore absent from the
+        # lockfile. Injecting it again would make the Gemfile invalid.
+        application_dependencies = {}
+        builder.dependencies.each { |dependency| application_dependencies[dependency.name] = true }
+
+        application_locked = Bundler::LockfileParser.new(Bundler.read_file(lockfile_path))
+        application_locked.specs.each { |spec| application_dependencies[spec.name] = true }
+
+        # Bundler remains responsible for checking whether the application
+        # versions satisfy the dependencies of the injected gems. Only package
+        # dependencies absent from the application resolution are pinned here.
+        @deps.reject! { |dependency| application_dependencies.key?(dependency.name) }
 
         # Inject remaining dependencies into Gemfile
         #

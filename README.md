@@ -56,25 +56,36 @@ ruby your_application.rb
 bundle exec ruby your_application.rb
 ```
 
-### Experimental direct loading
+### Direct loading fallback
 
-Set `DD_INTERNAL_RUBY_INJECTOR_DIRECT=true` to load the packaged Datadog gem
-without generating an injected Gemfile or lockfile and without patching Bundler.
-The injector activates the application bundle normally, reuses compatible gems
+The existing Bundler-based injection path remains the default. When the
+application has a lockfile but that path cannot write its generated files or
+hits a known Gemfile, lockfile, or dependency-resolution failure, the injector
+automatically falls back to direct loading. Direct loading does not generate an
+injected Gemfile or lockfile and does not patch Bundler.
+
+The fallback activates the application bundle normally, reuses compatible gems
 already activated by the application, and adds missing dependencies directly
 from the application bundle or injection package. It uses a deterministic
-backtracking resolver across the application bundle and every dependency version
-installed in the injection package. It prefers the package lockfile's versions,
-then backtracks to packaged alternatives when needed, and validates Ruby,
-RubyGems, platform, and transitive dependency constraints before changing the
-process. Datadog SDK candidates remain limited to the package lockfile; an SDK
-already activated by the application is immutable like every other loaded gem.
+backtracking resolver across the application bundle and every dependency
+version installed in the injection package. It prefers the package lockfile's
+versions, then backtracks to packaged alternatives when needed, and validates
+Ruby, RubyGems, platform, and transitive dependency constraints before changing
+the process. Datadog SDK candidates remain limited to the package lockfile; an
+SDK already activated by the application is immutable like every other loaded
+gem.
+
+Set `DD_INTERNAL_RUBY_INJECTOR_DIRECT=true` to force direct loading, or `false`
+to disable automatic fallback. Unlocked applications continue to use the
+existing safety guard by default because they do not provide a stable dependency
+graph; forcing direct loading opts into resolving that graph through Bundler.
 
 Direct loading fails before loading Datadog when an application gem conflicts
 with the packaged dependency graph, a required platform build is absent, or the
 package does not contain any satisfiable dependency set. Already activated gems
-cannot be replaced safely in-process. This mode is experimental and is intended
-for testing read-only filesystem support.
+cannot be replaced safely in-process. Automatic fallback is attempted only from
+classified recoverable states so an existing successful injection path is never
+replaced.
 
 ## Project Structure
 

@@ -178,7 +178,10 @@ class << self
   def call(context)
     LOG.info { "injector:call context:#{context}" }
 
-    return call_direct(context) if context[:inject][:ruby][:direct]
+    return call_requested_direct(context) if context[:inject][:ruby][:direct]
+    if context[:inject][:ruby][:direct_fallback] && !context[:fs][:writable]
+      return call_direct_fallback(context, nil, 'fs.readonly')
+    end
 
     # TODO: check if nested injection (maybe very early too)
     # TODO: check if injection already performed
@@ -241,12 +244,18 @@ class << self
       end
     end
 
-    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
-
     if err
       LOG.debug { "injector:error code:#{err} msg:#{msg.inspect} cause:#{cause.inspect}"}
+
+      if context[:inject][:ruby][:direct_fallback] && recoverable_for_direct?(err)
+        return call_direct_fallback(context, err, err)
+      end
+
+      ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
       return [nil, err]
     end
+
+    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
     return [false, nil] unless gemfile
 
@@ -339,6 +348,73 @@ class << self
       LOG.debug { "injector:error code:bundler.direct.load msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
       [nil, 'bundler.direct.load']
     end
+  end
+
+  def call_requested_direct(context)
+    original_err = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR']
+    injected, direct_err = call_direct(context)
+
+    # A bundle/bundler CLI defers direct loading to its application child.
+    # Keep the fallback context in the environment until that child resolves.
+    return [injected, direct_err] if injected == false && !direct_err
+
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR')
+
+    if direct_err && original_err
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT')
+      ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
+      return [nil, original_err]
+    end
+
+    [injected, direct_err]
+  end
+
+  def call_direct_fallback(context, original_err, trigger)
+    previous_direct = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT']
+    previous_fallback_error = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR']
+    ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] = 'true'
+    ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR'] = original_err if original_err
+
+    LOG.info { "injector:direct_fallback trigger:#{trigger}" }
+
+    begin
+      injected, direct_err = call_direct(context)
+    rescue StandardError
+      restore_direct_environment(previous_direct, previous_fallback_error)
+      raise
+    end
+
+    unless direct_err
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR') unless injected == false
+      return [injected, nil]
+    end
+
+    restore_direct_environment(previous_direct, previous_fallback_error)
+    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false' if original_err
+
+    LOG.debug { "injector:direct_fallback failed trigger:#{trigger} err:#{direct_err}" }
+    [nil, original_err || direct_err]
+  end
+
+  def restore_direct_environment(previous_direct, previous_fallback_error)
+    if previous_direct
+      ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] = previous_direct
+    else
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT')
+    end
+
+    if previous_fallback_error
+      ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR'] = previous_fallback_error
+    else
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR')
+    end
+  end
+
+  def recoverable_for_direct?(err)
+    return true if err == 'fs.write'
+    return true if err == 'bundler.inject'
+
+    !!(err =~ %r{\Abundler\.inject\.(?:resolve|gemfile\.(?:eval|inject|write)|lockfile\.write)\z})
   end
 
   def options_for(name)

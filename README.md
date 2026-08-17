@@ -80,6 +80,15 @@ to disable automatic fallback. Unlocked applications continue to use the
 existing safety guard by default because they do not provide a stable dependency
 graph; forcing direct loading opts into resolving that graph through Bundler.
 
+Bundler and RubyGems 5 automatically use direct loading through their supported
+setup and gem activation surfaces instead of the injector's version-sensitive
+Gemfile mutation APIs. This does not expand the SDK runtime support matrix: the
+injector guard and packaged `datadog` gem's Ruby, RubyGems, platform, and
+dependency requirements remain authoritative. Existing Bundler/RubyGems 2-4
+applications keep the established injection path. Applications using a future
+supported component may be unlocked because direct loading does not rewrite
+their dependency graph.
+
 Direct loading fails before loading Datadog when an application gem conflicts
 with the packaged dependency graph, a required platform build is absent, or the
 package does not contain any satisfiable dependency set. Already activated gems

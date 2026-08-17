@@ -1,8 +1,13 @@
 # ruby-version-min: 1.8.7
 
+FORWARD_COMPATIBILITY = import 'forward_compatibility'
+
 class << self
   def call(status)
     result = []
+    direct = status[:inject][:ruby][:direct]
+    direct_fallback = status[:inject][:ruby][:direct_fallback]
+    future_compatibility = FORWARD_COMPATIBILITY.required?(status)
 
     if !status[:inject][:ruby][:force]['ruby.version'] && lower(status[:ruby][:version], 2, 4)
       result << { :name => 'ruby.version', :reason => 'runtime.parser', :value => status[:ruby][:version] }
@@ -36,15 +41,15 @@ class << self
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if !status[:inject][:ruby][:force]['rubygems.version'] && min(status[:bundler][:rubygems], 5, 0, 0)
+    if !status[:inject][:ruby][:force]['rubygems.version'] && !direct && !direct_fallback && min(status[:bundler][:rubygems], 5, 0, 0)
       result << { :name => 'rubygems.version', :reason => 'rubygems.version', :value => status[:bundler][:rubygems] }
     end
 
-    if !status[:inject][:ruby][:force]['bundler.version'] && min(status[:bundler][:version], 5, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version'] && !direct && !direct_fallback && min(status[:bundler][:version], 5, 0, 0)
       result << { :name => 'bundler.version', :reason => 'bundler.version', :value => status[:bundler][:version] }
     end
 
-    if !status[:inject][:ruby][:force]['bundler.version.simulated'] && min(status[:bundler][:simulate_version], 5, 0, 0)
+    if !status[:inject][:ruby][:force]['bundler.version.simulated'] && !direct && !direct_fallback && min(status[:bundler][:simulate_version], 5, 0, 0)
       result << { :name => 'bundler.version.simulated', :reason => 'bundler.version.simulated', :value => status[:bundler][:simulate_version] }
     end
 
@@ -52,7 +57,7 @@ class << self
       result << { :name => 'bundler.bundled', :reason => 'bundler.unbundled' }
     end
 
-    if !status[:inject][:ruby][:direct] && !status[:inject][:ruby][:force]['bundler.locked'] && !status[:bundler][:locked]
+    if !direct && !(direct_fallback && future_compatibility) && !status[:inject][:ruby][:force]['bundler.locked'] && !status[:bundler][:locked]
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
@@ -60,7 +65,7 @@ class << self
       result << { :name => 'bundler.platform.ruby', :reason => 'bundler.platform.forced' }
     end
 
-    if !status[:inject][:ruby][:direct] && !status[:inject][:ruby][:direct_fallback] && !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
+    if !direct && !direct_fallback && !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
       result << { :name => 'fs.writable', :reason => 'fs.readonly' }
     end
 

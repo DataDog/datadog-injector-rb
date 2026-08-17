@@ -4,6 +4,7 @@ LOG = import 'log'
 CONTEXT = import 'context'
 BUNDLER = import 'bundler'
 DIRECT = import 'direct'
+FORWARD_COMPATIBILITY = import 'forward_compatibility'
 
 module Patch
   module Injector
@@ -179,6 +180,9 @@ class << self
     LOG.info { "injector:call context:#{context}" }
 
     return call_requested_direct(context) if context[:inject][:ruby][:direct]
+    if context[:inject][:ruby][:direct_fallback] && FORWARD_COMPATIBILITY.required?(context)
+      return call_direct_fallback(context, nil, 'forward.compatibility')
+    end
     if context[:inject][:ruby][:direct_fallback] && !context[:fs][:writable]
       return call_direct_fallback(context, nil, 'fs.readonly')
     end

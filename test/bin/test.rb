@@ -1,6 +1,8 @@
 INJECTION_DIR = File.expand_path(File.join(__dir__, '..', '..'))
 
 require_relative 'resolver_test'
+require_relative 'forward_compatibility_test'
+require_relative 'forward_compatibility_guard_test'
 
 # Idealised syntax
 #
@@ -406,6 +408,19 @@ SUITE = [
         'app lockfile should not include datadog',
         'new gemfile should exist',
         'new lockfile should exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'common', inject: true, injector: 'datadog', packaged: true, env: 'BUNDLE_SIMULATE_VERSION=5.0' } => {
+      [{ engine: 'ruby', version: '4.0' }] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
         'reported result type should be success',

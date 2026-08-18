@@ -130,6 +130,8 @@ module Patch
 
         # Dump dependency resolution as a lockfile on disk
         begin
+          complete_lockfile_checksums!
+
           # Definition#lock changed signature on 2.5.6
           # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
           # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
@@ -148,6 +150,35 @@ module Patch
 
         # Return injected dependencies
         @deps
+      end
+    end
+
+    def complete_lockfile_checksums!
+      return unless @options[:complete_checksums]
+      return unless @definition.respond_to?(:locked_checksums)
+      return unless @definition.locked_checksums
+
+      resolved_specs = @definition.resolve
+
+      resolved_specs.each do |spec|
+        store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
+        next unless store && (store.missing?(spec) || store.empty?(spec))
+
+        cache_file = File.join(@options[:package_gem_home], 'cache', "#{spec.full_name}.gem")
+        next unless File.file?(cache_file)
+
+        require 'rubygems/package'
+        checksum = Bundler::Checksum.from_gem_package(Gem::Package.new(cache_file))
+        store.register(spec, checksum)
+      end
+
+      incomplete = resolved_specs.find do |spec|
+        store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
+        store && (store.missing?(spec) || store.empty?(spec))
+      end
+
+      if incomplete
+        raise LockfileWriteError.new("No checksum is available for #{incomplete.full_name}")
       end
     end
   end
@@ -224,7 +255,11 @@ class << self
       gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec.name)) }.uniq
 
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
-      injector = Bundler::Injector.new(gems)
+      injector = Bundler::Injector.new(
+        gems,
+        :complete_checksums => context[:bundler][:frozen],
+        :package_gem_home => package_gem_home
+      )
       injector.singleton_class.prepend(Patch::Injector)
 
       begin

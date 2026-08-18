@@ -390,6 +390,22 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true, read_only: true } => {
+      [
+        { engine: 'ruby', version: '3.2' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should not exist',
+        'new lockfile should not exist',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
     { fixture: 'fallback', inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },

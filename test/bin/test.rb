@@ -390,7 +390,14 @@ SUITE = [
         'reported result type should be success',
       ],
     },
-    { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true, read_only: true } => {
+    {
+      fixture: 'frozen',
+      inject: true,
+      injector: 'datadog',
+      packaged: true,
+      read_only: true,
+      env: 'DD_TEST_EXPECT_READ_ONLY_INJECTION=true',
+    } => {
       [
         { engine: 'ruby', version: '3.2' },
         { engine: 'ruby', version: '4.0' },

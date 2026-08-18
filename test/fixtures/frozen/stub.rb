@@ -14,3 +14,11 @@ if Gem.loaded_specs['datadog']
   require 'datadog'
   puts "stub:#{stub} datadog:#{!!defined?(Datadog)}"
 end
+
+if ENV['DD_TEST_EXPECT_READ_ONLY_INJECTION'] == 'true'
+  raise 'Read-only injection fixture unexpectedly has a writable application directory' if File.writable?(Dir.pwd)
+
+  unless defined?(Datadog::SingleStepInstrument::LOADED)
+    raise 'Datadog was not loaded on a read-only application directory'
+  end
+end

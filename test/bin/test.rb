@@ -3,6 +3,7 @@ INJECTION_DIR = File.expand_path(File.join(__dir__, '..', '..'))
 require_relative 'resolver_test'
 require_relative 'forward_compatibility_test'
 require_relative 'forward_compatibility_guard_test'
+require_relative 'direct_test'
 
 # Idealised syntax
 #
@@ -533,6 +534,29 @@ SUITE = [
         { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
         { engine: 'ruby', version: '4.0' },
       ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    {
+      fixture: 'frozen',
+      inject: true,
+      injector: 'datadog',
+      packaged: true,
+      env: 'DD_INTERNAL_RUBY_INJECTOR_DIRECT=false',
+      lock_env: 'BUNDLE_LOCKFILE_CHECKSUMS=true',
+    } => {
+      { engine: 'ruby', version: '3.1' } => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
         'app gemfile should not include datadog',
@@ -1241,6 +1265,10 @@ def main(argv)
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
+            if (lock_env = group[:lock_env])
+              key, value = lock_env.split('=', 2)
+              env[key] = value
+            end
             pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"

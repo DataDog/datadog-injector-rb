@@ -162,7 +162,7 @@ module Patch
 
       resolved_specs.each do |spec|
         store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
-        next unless store && (store.missing?(spec) || store.empty?(spec))
+        next unless store && checksum_missing_or_empty?(store, spec)
 
         cache_file = File.join(@options[:package_gem_home], 'cache', "#{spec.full_name}.gem")
         next unless File.file?(cache_file)
@@ -174,12 +174,16 @@ module Patch
 
       incomplete = resolved_specs.find do |spec|
         store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
-        store && (store.missing?(spec) || store.empty?(spec))
+        store && checksum_missing_or_empty?(store, spec)
       end
 
       if incomplete
         raise LockfileWriteError.new("No checksum is available for #{incomplete.full_name}")
       end
+    end
+
+    def checksum_missing_or_empty?(store, spec)
+      store.missing?(spec) || store.to_lock(spec) == spec.lock_name
     end
   end
 end

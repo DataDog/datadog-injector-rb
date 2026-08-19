@@ -37,15 +37,14 @@ class << self
 
   def bundler_cli?(context)
     name = context[:process][:name]
-    name && ['bundle', 'bundler'].include?(File.basename(name))
+    name && !!(File.basename(name) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/)
   end
 
   def setup_bundle
-    BUNDLER.send(:require!)
-
     begin
+      BUNDLER.send(:require!)
       require 'bundler/setup'
-    rescue StandardError => e
+    rescue SystemExit, StandardError => e
       raise SetupError.new('Failed to activate the application bundle', e)
     end
   end
@@ -130,12 +129,7 @@ class << self
       next if candidate[:source] == :loaded
 
       spec = candidate[:spec]
-      spec.full_require_paths.each do |path|
-        next if $LOAD_PATH.include?(path)
-
-        $LOAD_PATH << path
-        added_paths << path
-      end
+      add_to_load_path(spec, added_paths)
 
       previous_specs[spec.name] = Gem.loaded_specs[spec.name]
       Gem.loaded_specs[spec.name] = spec
@@ -154,6 +148,19 @@ class << self
       rollback(added_paths, previous_specs)
       raise LoadError.new('Failed to load Datadog directly', e)
     end
+  end
+
+  def add_to_load_path(spec, added_paths)
+    paths = spec.full_require_paths.reject { |path| $LOAD_PATH.include?(path) }
+    return if paths.empty?
+
+    insert_index = Gem.load_path_insert_index
+    if insert_index
+      $LOAD_PATH.insert(insert_index, *paths)
+    else
+      $LOAD_PATH.unshift(*paths)
+    end
+    added_paths.concat(paths)
   end
 
   def rollback(added_paths, previous_specs)

@@ -3,6 +3,8 @@
 LOG = import 'log'
 CONTEXT = import 'context'
 BUNDLER = import 'bundler'
+DIRECT = import 'direct'
+FORWARD_COMPATIBILITY = import 'forward_compatibility'
 
 module Patch
   module Injector
@@ -128,6 +130,8 @@ module Patch
 
         # Dump dependency resolution as a lockfile on disk
         begin
+          complete_lockfile_checksums!
+
           # Definition#lock changed signature on 2.5.6
           # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
           # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
@@ -147,6 +151,39 @@ module Patch
         # Return injected dependencies
         @deps
       end
+    end
+
+    def complete_lockfile_checksums!
+      return unless @options[:complete_checksums]
+      return unless @definition.respond_to?(:locked_checksums)
+      return unless @definition.locked_checksums
+
+      resolved_specs = @definition.resolve
+
+      resolved_specs.each do |spec|
+        store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
+        next unless store && checksum_missing_or_empty?(store, spec)
+
+        cache_file = File.join(@options[:package_gem_home], 'cache', "#{spec.full_name}.gem")
+        next unless File.file?(cache_file)
+
+        require 'rubygems/package'
+        checksum = Bundler::Checksum.from_gem_package(Gem::Package.new(cache_file))
+        store.register(spec, checksum)
+      end
+
+      incomplete = resolved_specs.find do |spec|
+        store = spec.source.respond_to?(:checksum_store) && spec.source.checksum_store
+        store && checksum_missing_or_empty?(store, spec)
+      end
+
+      if incomplete
+        raise LockfileWriteError.new("No checksum is available for #{incomplete.full_name}")
+      end
+    end
+
+    def checksum_missing_or_empty?(store, spec)
+      store.missing?(spec) || store.to_lock(spec) == spec.lock_name
     end
   end
 end
@@ -176,6 +213,14 @@ end
 class << self
   def call(context)
     LOG.info { "injector:call context:#{context}" }
+
+    return call_requested_direct(context) if context[:inject][:ruby][:direct]
+    if context[:inject][:ruby][:direct_fallback] && FORWARD_COMPATIBILITY.required?(context)
+      return call_direct_fallback(context, nil, 'forward.compatibility')
+    end
+    if context[:inject][:ruby][:direct_fallback] && !context[:fs][:writable]
+      return call_direct_fallback(context, nil, 'fs.readonly')
+    end
 
     # TODO: check if nested injection (maybe very early too)
     # TODO: check if injection already performed
@@ -214,7 +259,11 @@ class << self
       gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec.name)) }.uniq
 
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
-      injector = Bundler::Injector.new(gems)
+      injector = Bundler::Injector.new(
+        gems,
+        :complete_checksums => context[:bundler][:frozen],
+        :package_gem_home => package_gem_home
+      )
       injector.singleton_class.prepend(Patch::Injector)
 
       begin
@@ -238,12 +287,18 @@ class << self
       end
     end
 
-    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
-
     if err
       LOG.debug { "injector:error code:#{err} msg:#{msg.inspect} cause:#{cause.inspect}"}
+
+      if context[:inject][:ruby][:direct_fallback] && recoverable_for_direct?(err)
+        return call_direct_fallback(context, err, err)
+      end
+
+      ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
       return [nil, err]
     end
+
+    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
 
     return [false, nil] unless gemfile
 
@@ -321,6 +376,88 @@ class << self
     ENV['BUNDLE_GEMFILE'] = gemfile
 
     [true, nil]
+  end
+
+  def call_direct(context)
+    begin
+      [DIRECT.call(context), nil]
+    rescue DIRECT::SetupError => e
+      LOG.debug { "injector:error code:bundler.direct.setup msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.setup']
+    rescue DIRECT::ResolutionError => e
+      LOG.debug { "injector:error code:bundler.direct.resolve msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.resolve']
+    rescue DIRECT::LoadError => e
+      LOG.debug { "injector:error code:bundler.direct.load msg:#{e.message.inspect} cause:#{e.cause.inspect}" }
+      [nil, 'bundler.direct.load']
+    end
+  end
+
+  def call_requested_direct(context)
+    original_err = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR']
+    injected, direct_err = call_direct(context)
+
+    # A bundle/bundler CLI defers direct loading to its application child.
+    # Keep the fallback context in the environment until that child resolves.
+    return [injected, direct_err] if injected == false && !direct_err
+
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR')
+
+    if direct_err && original_err
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT')
+      ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
+      return [nil, original_err]
+    end
+
+    [injected, direct_err]
+  end
+
+  def call_direct_fallback(context, original_err, trigger)
+    previous_direct = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT']
+    previous_fallback_error = ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR']
+    ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] = 'true'
+    ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR'] = original_err if original_err
+
+    LOG.info { "injector:direct_fallback trigger:#{trigger}" }
+
+    begin
+      injected, direct_err = call_direct(context)
+    rescue StandardError
+      restore_direct_environment(previous_direct, previous_fallback_error)
+      raise
+    end
+
+    unless direct_err
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR') unless injected == false
+      return [injected, nil]
+    end
+
+    restore_direct_environment(previous_direct, previous_fallback_error)
+    ENV['DD_INTERNAL_RUBY_INJECTOR'] = 'false' if original_err
+
+    LOG.debug { "injector:direct_fallback failed trigger:#{trigger} err:#{direct_err}" }
+    [nil, original_err || direct_err]
+  end
+
+  def restore_direct_environment(previous_direct, previous_fallback_error)
+    if previous_direct
+      ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT'] = previous_direct
+    else
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT')
+    end
+
+    if previous_fallback_error
+      ENV['DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR'] = previous_fallback_error
+    else
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_DIRECT_FALLBACK_ERROR')
+    end
+  end
+
+  def recoverable_for_direct?(err)
+    return true if err == 'fs.write'
+    return true if err == 'bundler.inject'
+
+    !!(err =~ %r{\Abundler\.inject\.(?:resolve|gemfile\.(?:eval|inject|write)|lockfile\.write)\z})
   end
 
   def options_for(name)

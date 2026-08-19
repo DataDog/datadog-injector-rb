@@ -20,6 +20,8 @@ class << self
 
     # error reasons
     when 'bundler.inject'                then 'incompatible_dependency'
+    when 'bundler.direct.resolve'        then 'incompatible_dependency'
+    when /^bundler\.direct\./            then 'internal_error'
 
     # fallback
     else                                      'unknown'
@@ -43,11 +45,11 @@ class << self
     when 'runtime.forkless'
       'The Ruby runtime does not support forking'
     when 'rubygems.version'
-      "The Ruby runtime 'rubygems' component version in use is too low (expected:[3.4+,<4.0] actual:#{value})"
+      "The Ruby runtime 'rubygems' component version is incompatible with the selected injection strategy (expected:3.4+; 5+ requires direct loading actual:#{value})"
     when 'bundler.version'
-      "The Ruby runtime 'bundler' component version in use is out of range (expected:[2.4+,<4.0] actual:#{value})"
+      "The Ruby runtime 'bundler' component version is incompatible with the selected injection strategy (expected:2.4+; 5+ requires direct loading actual:#{value})"
     when 'bundler.version.simulated'
-      "Bundler is configured to simulate an incompatible version (expected:<4.0 actual:#{value})"
+      "Bundler is configured to simulate a version that requires direct loading (actual:#{value})"
     when 'bundler.unbundled'
       'The Ruby process is not running in a bundle (no Gemfile found)'
     when 'bundler.unlocked'
@@ -62,6 +64,12 @@ class << self
     # error reasons
     when 'bundler.inject'
       'A dependency was found to be incompatible'
+    when 'bundler.direct.resolve'
+      'The activated application bundle is incompatible with direct injection'
+    when 'bundler.direct.setup'
+      'The application bundle could not be activated for direct injection'
+    when 'bundler.direct.load'
+      'Datadog could not be loaded directly from the injection package'
 
     # fallback
     else

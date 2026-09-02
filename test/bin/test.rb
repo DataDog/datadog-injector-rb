@@ -586,6 +586,36 @@ SUITE = [
           'reported result type should be success',
         ]
       }
+    },
+    { inject: true, injector: 'datadog', packaged: true, engine: 'ruby', version: '4.0' } => {
+      { fixture: 'direct_datadog' } => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'telemetry should not include error',
+        'app gemfile should include datadog',
+        'app lockfile should include datadog',
+        'new gemfile should include one datadog',
+        'new lockfile should include datadog',
+        'gem datadog should not have require option',
+        'gem datadog should have version from app',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+      { fixture: 'transitive_datadog' } => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'telemetry should not include error',
+        'app gemfile should not include datadog',
+        'app lockfile should include datadog',
+        'new gemfile should include one datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'gem datadog should have version from app',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
     }
 
     ]
@@ -746,14 +776,29 @@ example 'app gemfile should not include datadog' do |context|
   !File.read(gemfile).include?('gem "datadog"') rescue nil
 end
 
+example 'app gemfile should include datadog' do |context|
+  gemfile = File.join(context.path, 'Gemfile')
+  File.readlines(gemfile).grep(/^gem ["']datadog["']/).one? rescue nil
+end
+
 example 'app lockfile should not include datadog' do |context|
   lockfile = File.join(context.path, 'Gemfile.lock')
   !File.read(lockfile).include?(' datadog ') rescue nil
 end
 
+example 'app lockfile should include datadog' do |context|
+  lockfile = File.join(context.path, 'Gemfile.lock')
+  File.readlines(lockfile).grep(/^\s{4}datadog \(/).one? rescue nil
+end
+
 example 'new gemfile should include datadog' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
   File.read(gemfile).include?('gem "datadog"') rescue nil
+end
+
+example 'new gemfile should include one datadog' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/^gem ["']datadog["']/).one? rescue nil
 end
 
 example 'new lockfile should include datadog' do |context|
@@ -764,6 +809,20 @@ end
 example 'gem datadog should have require option' do |context|
   gemfile = File.join(context.path, 'datadog.gemfile')
   File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{(?::require\s*=>\s*|require:\s*)"datadog/single_step_instrument"}) rescue nil
+end
+
+example 'gem datadog should not have require option' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/^gem ["']datadog["']/).none?(%r{datadog/single_step_instrument}) rescue nil
+end
+
+example 'gem datadog should have version from app' do |context|
+  pattern = /^\s{4}datadog \(([^)]+)\)/
+  app = File.readlines(File.join(context.path, 'Gemfile.lock')).grep(pattern).map { |line| line[pattern, 1] }
+  injected = File.readlines(File.join(context.path, 'datadog.gemfile.lock')).grep(pattern).map { |line| line[pattern, 1] }
+  !app.empty? && app == injected
+rescue StandardError
+  nil
 end
 
 example 'gem ffi should have version from app' do |context|

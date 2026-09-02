@@ -50,8 +50,12 @@ module Patch
 
         # Filter out dependencies already provided by the application. Keep the
         # Datadog root so Bundler applies the single-step require option.
-        original_definition = builder.to_definition(lockfile_path, {})
-        app_spec_names = original_definition.specs.map { |spec| spec.name }
+        begin
+          original_definition = builder.to_definition(lockfile_path, {})
+          app_spec_names = original_definition.specs.map { |spec| spec.name }
+        rescue StandardError => e
+          raise ResolutionError.new("Failed to resolve original gemfile", e)
+        end
 
         @deps.reject! do |dependency|
           builder.dependencies.any? { |dep| dep.name == dependency.name } ||

@@ -48,17 +48,15 @@ module Patch
           raise GemfileEvalError.new("Failed to evaluate original gemfile contents", e)
         end
 
-        # Filter out dependencies to inject based on presence in original Gemfile
-        #
-        # TODO: this should
-        # - build list of app deps:
-        #   `original_definition = builder.to_definition(lockfile_path, {})`
-        # - for each new gem dep, if in active app gems then remove dep by name:
-        #   `original_definition.specs.find { |s| s.name == 'ffi' }`
-        # - else if in inactive deps => abort?:
-        #   `original_definition.current_dependencies.find { |dep| dep.name == 'ffi'}`
-        # - else keep it
-        @deps.reject! { |d| builder.dependencies.any? { |dep| dep.name == d.name } }
+        # Filter out dependencies already provided by the application. Keep the
+        # Datadog root so Bundler applies the single-step require option.
+        original_definition = builder.to_definition(lockfile_path, {})
+        app_spec_names = original_definition.specs.map { |spec| spec.name }
+
+        @deps.reject! do |dependency|
+          builder.dependencies.any? { |dep| dep.name == dependency.name } ||
+            dependency.name != 'datadog' && app_spec_names.include?(dependency.name)
+        end
 
         # Inject remaining dependencies into Gemfile
         #

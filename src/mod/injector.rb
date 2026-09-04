@@ -23,10 +23,17 @@ module Patch
     class GemfileEvalError < InjectionError; end
     class GemfileInjectError < InjectionError; end
 
+    def build_gem_lines(conservative_versioning)
+      @deps.zip(super.split("\n")).map do |dependency, line|
+        dependency.force_ruby_platform ? "#{line}, force_ruby_platform: true" : line
+      end.join("\n")
+    end
+    private :build_gem_lines
+
     # - https://github.com/rubygems/rubygems/blob/v3.3.26/bundler/lib/bundler/injector.rb#L25
     # - https://github.com/rubygems/rubygems/blob/v3.5.6/bundler/lib/bundler/injector.rb#L25
     # - https://github.com/rubygems/rubygems/blob/v3.6.9/bundler/lib/bundler/injector.rb#L25
-    def inject(gemfile_path, lockfile_path)
+    def inject(gemfile_path, lockfile_path, package_locked = nil, package_lockfile = nil)
       # TODO: Bundler.definition is side-effectful
       # TODO: also it does not uses gempfile_path: report upstream?
       # Bundler.definition.ensure_equivalent_gemfile_and_lockfile(true)
@@ -41,17 +48,19 @@ module Patch
           raise GemfileEvalError.new("Failed to evaluate original gemfile contents", e)
         end
 
-        # Filter out dependencies to inject based on presence in original Gemfile
-        #
-        # TODO: this should
-        # - build list of app deps:
-        #   `original_definition = builder.to_definition(lockfile_path, {})`
-        # - for each new gem dep, if in active app gems then remove dep by name:
-        #   `original_definition.specs.find { |s| s.name == 'ffi' }`
-        # - else if in inactive deps => abort?:
-        #   `original_definition.current_dependencies.find { |dep| dep.name == 'ffi'}`
-        # - else keep it
-        @deps.reject! { |d| builder.dependencies.any? { |dep| dep.name == d.name } }
+        # Filter out dependencies already provided by the application. Keep the
+        # Datadog root so Bundler applies the single-step require option.
+        begin
+          original_definition = builder.to_definition(lockfile_path, {})
+          app_spec_names = original_definition.specs.map { |spec| spec.name }
+        rescue StandardError => e
+          raise ResolutionError.new("Failed to resolve original gemfile", e)
+        end
+
+        @deps.reject! do |dependency|
+          builder.dependencies.any? { |dep| dep.name == dependency.name } ||
+            dependency.name != 'datadog' && app_spec_names.include?(dependency.name)
+        end
 
         # Inject remaining dependencies into Gemfile
         #
@@ -128,6 +137,8 @@ module Patch
 
         # Dump dependency resolution as a lockfile on disk
         begin
+          register_package_checksums(package_locked, package_lockfile)
+
           # Definition#lock changed signature on 2.5.6
           # - https://github.com/ruby/rubygems/commit/2e282343a88db4373bbecead5ece293b5802526c
           # - https://github.com/ruby/rubygems/commit/7f801a3ff424ac6ac91f68ad988df5b78cebf99b
@@ -146,6 +157,41 @@ module Patch
 
         # Return injected dependencies
         @deps
+      end
+    end
+
+    private
+
+    def register_package_checksums(package_locked, package_lockfile)
+      return unless @definition.respond_to?(:locked_checksums) && @definition.locked_checksums
+
+      unless package_locked && package_locked.respond_to?(:checksums) && package_locked.checksums
+        raise "Package lockfile does not contain checksums"
+      end
+
+      package_specs = {}
+      package_locked.specs.each { |spec| package_specs[spec.lock_name] = spec }
+
+      injected_names = {}
+      @deps.each { |dependency| injected_names[dependency.name] = true }
+
+      @definition.resolve.each do |resolved_spec|
+        next unless injected_names.key?(resolved_spec.name)
+        next unless resolved_spec.source.respond_to?(:checksum_store)
+
+        resolved_store = resolved_spec.source.checksum_store
+        package_spec = package_specs[resolved_spec.lock_name]
+        raise "Missing packaged specification #{resolved_spec.lock_name}" unless package_spec
+
+        package_store = package_spec.source.checksum_store
+        entry = package_store.to_lock(package_spec)
+        encoded = entry[package_spec.lock_name.length..-1].to_s.strip
+        raise "Missing packaged checksum #{package_spec.lock_name}" if encoded.empty?
+
+        encoded.split(',').each do |value|
+          checksum = Bundler::Checksum.from_lock(value, package_lockfile)
+          resolved_store.register(resolved_spec, checksum)
+        end
       end
     end
   end
@@ -211,14 +257,19 @@ class << self
         return [nil, *Err.new("fs.write", e).to_a]
       end
 
-      gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec.name)) }.uniq
+      gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec)) }.uniq
 
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
       injector = Bundler::Injector.new(gems)
       injector.singleton_class.prepend(Patch::Injector)
 
       begin
-        injector.inject(Pathname.new(datadog_gemfile), Pathname.new(datadog_lockfile))
+        injector.inject(
+          Pathname.new(datadog_gemfile),
+          Pathname.new(datadog_lockfile),
+          package_locked,
+          package_lockfile
+        )
 
         [datadog_gemfile, nil]
       rescue Patch::Injector::GemfileEvalError => e
@@ -323,7 +374,10 @@ class << self
     [true, nil]
   end
 
-  def options_for(name)
-    name == 'datadog' ? { 'require' => 'datadog/single_step_instrument' } : {}
+  def options_for(spec)
+    options = {}
+    options['force_ruby_platform'] = true if spec.platform == Gem::Platform::RUBY
+    options['require'] = 'datadog/single_step_instrument' if spec.name == 'datadog'
+    options
   end
 end

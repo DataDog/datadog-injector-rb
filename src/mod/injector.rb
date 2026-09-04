@@ -3,6 +3,7 @@
 LOG = import 'log'
 CONTEXT = import 'context'
 BUNDLER = import 'bundler'
+MEMFD = import 'memfd'
 
 module Patch
   module Injector
@@ -218,7 +219,7 @@ class << self
     package_lockfile = context[:inject][:ruby][:package][:lockfile]
 
     # TODO: capture stdout+stderr
-    gemfile, gemfile_content, lockfile_content, err, msg, cause = CONTEXT.isolate do
+    gemfile, original_gemfile_content, original_lockfile_content, gemfile_content, lockfile_content, err, msg, cause = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
@@ -230,8 +231,9 @@ class << self
       # Read original gemfile content into memory
       begin
         original_gemfile_content = File.read(app_gemfile)
+        original_lockfile_content = File.read(app_lockfile)
       rescue StandardError => e
-        return [nil, nil, nil, *Err.new("fs.read", e).to_a]
+        return [nil, nil, nil, nil, nil, *Err.new("fs.read", e).to_a]
       end
 
       # TODO: this could be gathered in context
@@ -256,24 +258,26 @@ class << self
 
         [
           app_gemfile,
+          original_gemfile_content,
+          original_lockfile_content,
           injector.instance_variable_get(:@captured_gemfile_content),
           injector.instance_variable_get(:@captured_lockfile_content),
           nil
         ]
       rescue Patch::Injector::GemfileEvalError => e
-        [nil, nil, nil, *Err.new("bundler.inject.gemfile.eval", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.gemfile.eval", e).to_a]
       rescue Patch::Injector::GemfileInjectError => e
-        [nil, nil, nil, *Err.new("bundler.inject.gemfile.inject", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.gemfile.inject", e).to_a]
       rescue Patch::Injector::ResolutionError => e
-        [nil, nil, nil, *Err.new("bundler.inject.resolve", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.resolve", e).to_a]
       rescue Patch::Injector::GemfileWriteError => e
-        [nil, nil, nil, *Err.new("bundler.inject.gemfile.write", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.gemfile.write", e).to_a]
       rescue Patch::Injector::LockfileWriteError => e
-        [nil, nil, nil, *Err.new("bundler.inject.lockfile.write", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.lockfile.write", e).to_a]
       rescue Patch::Injector::InjectionError => e
-        [nil, nil, nil, *Err.new("bundler.inject", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject", e).to_a]
       rescue StandardError => e
-        [nil, nil, nil, *Err.new("bundler.inject.unknown", e).to_a]
+        [nil, nil, nil, nil, nil, *Err.new("bundler.inject.unknown", e).to_a]
       end
     end
 
@@ -286,16 +290,24 @@ class << self
 
     return [false, nil] unless gemfile
 
-    # Store captured in-memory content in env vars so that Bundler can be
-    # patched to return these contents on any future read of the gemfile or
-    # lockfile, both in this process and in exec'd child processes.
-    #
-    # NOTE: env var total size is limited (~1-2MB depending on OS). Extremely
-    # large lockfiles may exceed this. If that becomes an issue, consider
-    # compressing or using a tempfile fallback.
-    if gemfile_content && lockfile_content
-      ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT'] = gemfile_content
-      ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT'] = lockfile_content
+    payload = {
+      :gemfile_path => File.expand_path(gemfile.to_s),
+      :lockfile_path => File.expand_path(context[:bundler][:lockfile].to_s),
+      :gemfile_content => gemfile_content,
+      :lockfile_content => lockfile_content,
+      :original_gemfile_content => original_gemfile_content,
+      :original_lockfile_content => original_lockfile_content,
+    }
+
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT')
+    ENV['DD_INTERNAL_RUBY_INJECTOR_BUNDLE'] = 'true'
+
+    if (fd = MEMFD.create(payload))
+      ENV['DD_INTERNAL_RUBY_INJECTOR_MEMFD'] = fd.to_s
+    else
+      ENV.delete('DD_INTERNAL_RUBY_INJECTOR_MEMFD')
+      LOG.debug { "injector:memfd unavailable exc:#{MEMFD.error.class}:#{MEMFD.error.message}" } if MEMFD.error
     end
 
     # Set BUNDLE_GEMFILE to the original app gemfile path. Bundler will use
@@ -363,7 +375,7 @@ class << self
       # path, where app gems are installed.
       ENV['GEM_HOME'] = app_bundle_path
 
-      BUNDLER.patch!
+      BUNDLER.patch!(payload)
     else
       # Non-vendored mode: Bundler uses system gems (no BUNDLE_PATH set),
       # so we only need to prepend the package gem home to the existing
@@ -375,7 +387,8 @@ class << self
 
       # Install read interceptors for non-deployment mode too, so that
       # Bundler.setup reads the patched gemfile/lockfile from memory.
-      BUNDLER.patch_reads!
+      BUNDLER.patch_exec!
+      BUNDLER.patch_reads!(payload)
     end
 
     [true, nil]

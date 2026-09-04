@@ -343,31 +343,58 @@ SUITE = [
     [{ resolution: :local }] => [
 
     { fixture: 'frozen', inject: true, injector: 'datadog', packaged: true } => {
-      [
-        { engine: 'ruby', version: '2.6' },
-        { engine: 'ruby', version: '2.7' },
-        { engine: 'ruby', version: '3.0' },
-        { engine: 'ruby', version: '3.1' },
-        { engine: 'ruby', version: '3.2' },
-        { engine: 'ruby', version: '3.3' },
-        { engine: 'ruby', version: '3.4' },
-        { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
-        { engine: 'ruby', version: '4.0' },
-      ] => [
-        'telemetry should include metadata.tracer_version',
-        'telemetry should include complete',
-        'app gemfile should not include datadog',
-        'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
-        'new lockfile should have complete checksums',
-        'gem datadog should have require option',
-        'telemetry start should not include result report',
-        'telemetry conclusion should include result report',
-        'reported result type should be success',
-      ],
+      { checksums: false } => {
+        [
+          { engine: 'ruby', version: '2.6' },
+          { engine: 'ruby', version: '2.7' },
+          { engine: 'ruby', version: '3.0' },
+          { engine: 'ruby', version: '3.1' },
+          { engine: 'ruby', version: '3.2' },
+          { engine: 'ruby', version: '3.3' },
+          { engine: 'ruby', version: '3.4' },
+          { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+          { engine: 'ruby', version: '4.0' },
+        ] => [
+          'telemetry should include metadata.tracer_version',
+          'telemetry should include complete',
+          'app gemfile should not include datadog',
+          'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
+          'new gemfile should include datadog',
+          'new lockfile should include datadog',
+          'new lockfile should preserve checksum mode',
+          'gem datadog should have require option',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
+        ],
+      },
+      { checksums: true } => {
+        [
+          { engine: 'ruby', version: '3.1' },
+          { engine: 'ruby', version: '3.2' },
+          { engine: 'ruby', version: '3.3' },
+          { engine: 'ruby', version: '3.4' },
+          { engine: 'ruby', version: '3.5', env: 'DD_INTERNAL_RUBY_INJECTOR_FORCE=ruby.version' },
+          { engine: 'ruby', version: '4.0' },
+        ] => [
+          'telemetry should include metadata.tracer_version',
+          'telemetry should include complete',
+          'app gemfile should not include datadog',
+          'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
+          'new gemfile should include datadog',
+          'new lockfile should include datadog',
+          'new lockfile should preserve checksum mode',
+          'new lockfile should have complete checksums',
+          'gem datadog should have require option',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
+        ],
+      },
     },
     [{ fixture: 'force_ruby', inject: true, injector: 'datadog', packaged: true }, { fixture: 'hot', force_ruby_platform: true, inject: true, injector: 'datadog', packaged: true }] => {
       [
@@ -807,8 +834,15 @@ example 'new lockfile should include datadog' do |context|
   File.read(lockfile).include?(' datadog ') rescue nil
 end
 
-example 'new lockfile should have complete checksums' do |context|
+example 'new lockfile should preserve checksum mode' do |context|
   app_lockfile = File.read(File.join(context.path, 'Gemfile.lock'))
+  injected_lockfile = File.read(File.join(context.path, 'datadog.gemfile.lock'))
+  app_lockfile.include?("\nCHECKSUMS\n") == injected_lockfile.include?("\nCHECKSUMS\n")
+rescue StandardError
+  nil
+end
+
+example 'new lockfile should have complete checksums' do |context|
   injected_lockfile = File.read(File.join(context.path, 'datadog.gemfile.lock'))
   specs = injected_lockfile[/^GEM\n.*?^  specs:\n(.*?)(?=^\S|\z)/m, 1]
   section = injected_lockfile[/^CHECKSUMS\n(.*?)(?=^\S|\z)/m, 1]
@@ -816,11 +850,7 @@ example 'new lockfile should have complete checksums' do |context|
   expected = specs.to_s.lines.map { |line| line[/^ {4}(\S+ \([^)]+\))$/, 1] }.compact
   checksums = section.to_s.lines.map { |line| line[/^ {2}(\S+ \([^)]+\)) sha256=[0-9a-f]{64}$/, 1] }.compact
 
-  if app_lockfile.include?("\nCHECKSUMS\n")
-    section && (expected - checksums).empty?
-  else
-    true
-  end
+  section && (expected - checksums).empty?
 rescue StandardError
   nil
 end
@@ -1163,6 +1193,7 @@ def main(argv)
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
+            env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
             pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], title: 'lock fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
@@ -1180,6 +1211,7 @@ def main(argv)
                     {}
                   end
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
+            env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
             pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'install fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
@@ -1198,6 +1230,7 @@ def main(argv)
                   {}
                 end
           env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
+          env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)
 
           # HACK: skip injector.call to make tests faster

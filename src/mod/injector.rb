@@ -23,6 +23,13 @@ module Patch
     class GemfileEvalError < InjectionError; end
     class GemfileInjectError < InjectionError; end
 
+    def build_gem_lines(conservative_versioning)
+      @deps.zip(super.split("\n")).map do |dependency, line|
+        dependency.force_ruby_platform ? "#{line}, force_ruby_platform: true" : line
+      end.join("\n")
+    end
+    private :build_gem_lines
+
     # - https://github.com/rubygems/rubygems/blob/v3.3.26/bundler/lib/bundler/injector.rb#L25
     # - https://github.com/rubygems/rubygems/blob/v3.5.6/bundler/lib/bundler/injector.rb#L25
     # - https://github.com/rubygems/rubygems/blob/v3.6.9/bundler/lib/bundler/injector.rb#L25
@@ -211,7 +218,7 @@ class << self
         return [nil, *Err.new("fs.write", e).to_a]
       end
 
-      gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec.name)) }.uniq
+      gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec)) }.uniq
 
       # TODO: this implementation hits sources to build a stable and consistent dependency graph but we only want to ever use local gems
       injector = Bundler::Injector.new(gems)
@@ -323,7 +330,10 @@ class << self
     [true, nil]
   end
 
-  def options_for(name)
-    name == 'datadog' ? { 'require' => 'datadog/single_step_instrument' } : {}
+  def options_for(spec)
+    options = {}
+    options['force_ruby_platform'] = true if spec.platform == Gem::Platform::RUBY
+    options['require'] = 'datadog/single_step_instrument' if spec.name == 'datadog'
+    options
   end
 end

@@ -1,5 +1,7 @@
 # ruby-version-min: 1.8.7
 
+MEMFD = import 'memfd'
+
 class << self
   def status
     require!
@@ -34,7 +36,7 @@ class << self
     }
   end
 
-  def patch!
+  def patch!(payload)
     require!
 
     # Patch Bundler::Settings to neutralize deployment and vendored mode
@@ -69,21 +71,47 @@ class << self
     #    to Bundler.rubygems.gem_dir (i.e. Gem.dir), which is governed by
     #    GEM_HOME/GEM_PATH that we've already set up in injector.rb to include
     #    both the package gem home and the app's bundle path.
-    mod = Module.new do
-      def [](name)
-        return false if name == :deployment
-        return nil if name == :path
+    unless @settings_patched
+      mod = Module.new do
+        def [](name)
+          return false if name == :deployment
+          return nil if name == :path
 
-        super
+          super
+        end
+
+        def path
+          ::Bundler::Settings::Path.new(nil, true)
+        end
       end
 
-      def path
-        ::Bundler::Settings::Path.new(nil, true)
+      ::Bundler::Settings.prepend mod
+      @settings_patched = true
+    end
+
+    patch_exec!
+    patch_reads!(payload)
+  end
+
+  def patch_frozen!
+    return if @frozen_patched
+
+    mod = Module.new do
+      def [](name)
+        return false if name == :frozen
+
+        super
       end
     end
 
     ::Bundler::Settings.prepend mod
+    @frozen_patched = true
+  end
 
+  def patch_exec!
+    return if @exec_patched
+
+    require!
     require 'bundler/cli'
     require 'bundler/cli/exec'
 
@@ -91,54 +119,67 @@ class << self
       def kernel_exec(*args)
         ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r(\s*)\S+/(?:injector|host_inject|auto_inject)\.rb)(.*)$}, '\2 \1 \3')
         ENV.delete('BUNDLER_SETUP')
+        MEMFD.preserve_exec!(args)
 
-        super
+        super(*args)
       end
     end
 
     ::Bundler::CLI::Exec.prepend mod
-
-    # Install read interceptors so Bundler returns patched in-memory content
-    # for the gemfile and lockfile instead of reading from disk.
-    patch_reads!
+    @exec_patched = true
   end
 
-  # Patch Bundler.read_file to return in-memory gemfile and lockfile content.
-  #
-  # When DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT and
-  # DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT env vars are set, any call
-  # to Bundler.read_file for the gemfile or lockfile path will return the
-  # env var content instead of reading from disk. This allows the injector
-  # to perform resolution without writing patched files to the filesystem.
-  #
-  # The gemfile and lockfile paths are derived from BUNDLE_GEMFILE (via
-  # Bundler.default_gemfile / Bundler.default_lockfile), so BUNDLE_GEMFILE
-  # must be set before calling this method.
-  def patch_reads!
-    gemfile_content  = ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT']
-    lockfile_content = ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT']
-
-    return unless gemfile_content && lockfile_content
-
+  def patch_reads!(payload)
     require!
+    @read_payload = payload
+    patch_frozen!
+    patch_runtime_lock!
 
-    gemfile_path  = ::Bundler.default_gemfile.to_s
-    lockfile_path = ::Bundler.default_lockfile.to_s
+    return if @reads_patched
 
+    patcher = self
     mod = Module.new do
       define_method(:read_file) do |file|
-        case file.to_s
-        when gemfile_path
-          gemfile_content
-        when lockfile_path
-          lockfile_content
-        else
-          super(file)
-        end
+        content = patcher.virtual_file(file)
+        content ? content.dup : super(file)
       end
     end
 
     ::Bundler.singleton_class.prepend(mod)
+    @reads_patched = true
+  end
+
+  def patch_runtime_lock!
+    return if @runtime_lock_patched
+
+    patcher = self
+    mod = Module.new do
+      define_method(:lock) do |*args|
+        patcher.virtual_lockfile?(@definition) ? nil : super(*args)
+      end
+    end
+
+    ::Bundler::Runtime.prepend(mod)
+    @runtime_lock_patched = true
+  end
+
+  def virtual_file(file)
+    return unless @read_payload
+
+    path = File.expand_path(file.to_s)
+    case path
+    when @read_payload[:gemfile_path]
+      @read_payload[:gemfile_content]
+    when @read_payload[:lockfile_path]
+      @read_payload[:lockfile_content]
+    end
+  end
+
+  def virtual_lockfile?(definition)
+    return false unless @read_payload
+
+    lockfile = definition.instance_variable_get(:@lockfile)
+    lockfile && File.expand_path(lockfile.to_s) == @read_payload[:lockfile_path]
   end
 
   private

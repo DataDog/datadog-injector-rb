@@ -12,6 +12,21 @@ telemetry.emit([{ :name => 'library_entrypoint.start' }])
 
 log = import 'log'
 report = import 'report'
+memfd = import 'memfd'
+
+cached_payload = nil
+cache_expected = ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false' && ENV['DD_INTERNAL_RUBY_INJECTOR_BUNDLE'] == 'true'
+
+if cache_expected
+  cached_payload = memfd.read(ENV['DD_INTERNAL_RUBY_INJECTOR_MEMFD'])
+  unless cached_payload
+    log.info { "inject:cache miss exc:#{memfd.error.class}:#{memfd.error.message}" } if memfd.error
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_BUNDLE')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_MEMFD')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_PATCH')
+  end
+end
 
 # TODO: config
 
@@ -31,6 +46,15 @@ context_status = begin
                  end
 
 unless context_status.nil?
+  if cached_payload && !memfd.matches?(cached_payload, context_status[:bundler][:gemfile], context_status[:bundler][:lockfile])
+    log.info { 'inject:cache miss reason:bundle_mismatch' }
+    cached_payload = nil
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_BUNDLE')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_MEMFD')
+    ENV.delete('DD_INTERNAL_RUBY_INJECTOR_PATCH')
+  end
+
   # stage 2: check context against requirements
 
   log.info { "context: #{context_status.inspect}" }
@@ -68,24 +92,26 @@ unless context_status.nil?
 
     injector = import 'injector'
 
-    if ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+    if cached_payload
       if ENV['DD_INTERNAL_RUBY_INJECTOR_PATCH']
         log.info { 'inject:patch' }
 
         bundler = import 'bundler'
 
-        bundler.patch!
+        bundler.patch!(cached_payload)
       else
         log.info { 'inject:skip' }
 
-        # Even without deployment/vendored patches, install read interceptors
-        # so Bundler reads the patched gemfile/lockfile content from env vars
-        # (set during the initial injection in the parent process).
-        if ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT'] && ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT']
-          bundler = import 'bundler'
-          bundler.patch_reads!
-        end
+        bundler = import 'bundler'
+        bundler.patch_exec!
+        bundler.patch_reads!(cached_payload)
       end
+
+      telemetry.emit([
+        { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
+      ], { :result => report.cached })
+    elsif ENV['DD_INTERNAL_RUBY_INJECTOR'] == 'false'
+      log.info { 'inject:skip' }
 
       telemetry.emit([
         { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },

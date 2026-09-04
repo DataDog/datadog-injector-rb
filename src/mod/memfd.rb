@@ -38,6 +38,7 @@ class << self
       io.flush
       io.fcntl(F_ADD_SEALS, REQUIRED_SEALS)
       raise IOError, 'memfd is not sealed' unless sealed?(io)
+      io.close_on_exec = false
 
       close!
       @io = io
@@ -68,7 +69,7 @@ class << self
     payload = decode(data)
     return unless payload
 
-    io.close_on_exec = true
+    io.close_on_exec = false
     io.autoclose = true if io.respond_to?(:autoclose=)
     close! if @io && @io != io
     @io = io
@@ -97,6 +98,14 @@ class << self
 
     options = args.last.is_a?(Hash) ? args.pop.dup : {}
     options[@io.fileno] = @io.fileno
+    args << options
+  end
+
+  def close_exec!(args)
+    return args unless @io && !@io.closed?
+
+    options = args.last.is_a?(Hash) ? args.pop.dup : {}
+    options[@io.fileno] = :close
     args << options
   end
 

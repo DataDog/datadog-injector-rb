@@ -39,7 +39,7 @@ class << self
       io.fcntl(F_ADD_SEALS, REQUIRED_SEALS)
       raise IOError, 'memfd is not sealed' unless sealed?(io)
 
-      @io.close if @io && !@io.closed?
+      close!
       @io = io
       fd
     rescue Exception
@@ -55,7 +55,12 @@ class << self
     @error = nil
     return unless value && value =~ /\A\d+\z/
 
-    io = IO.new(value.to_i, 'rb', :autoclose => false)
+    fd = value.to_i
+    io = if @io && !@io.closed? && @io.fileno == fd
+           @io
+         else
+           IO.new(fd, 'rb', :autoclose => false)
+         end
     raise IOError, 'descriptor is not a sealed regular file' unless io.stat.file? && sealed?(io)
     raise IOError, 'memfd payload is too large' if io.stat.size > MAX_PAYLOAD_SIZE
 
@@ -63,6 +68,9 @@ class << self
     payload = decode(data)
     return unless payload
 
+    io.close_on_exec = true
+    io.autoclose = true if io.respond_to?(:autoclose=)
+    close! if @io && @io != io
     @io = io
     payload
   rescue StandardError => e
@@ -94,6 +102,12 @@ class << self
 
   def fd
     @io.fileno if @io && !@io.closed?
+  end
+
+  def close!
+    @io.close if @io && !@io.closed?
+  ensure
+    @io = nil
   end
 
   private

@@ -362,6 +362,7 @@ SUITE = [
         'new lockfile should exist',
         'new gemfile should include datadog',
         'new lockfile should include datadog',
+        'new lockfile should have complete checksums',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -804,6 +805,20 @@ end
 example 'new lockfile should include datadog' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   File.read(lockfile).include?(' datadog ') rescue nil
+end
+
+example 'new lockfile should have complete checksums' do |context|
+  app_lockfile = File.read(File.join(context.path, 'Gemfile.lock'))
+  injected_lockfile = File.read(File.join(context.path, 'datadog.gemfile.lock'))
+  specs = injected_lockfile[/^GEM\n.*?^  specs:\n(.*?)(?=^\S|\z)/m, 1]
+  section = injected_lockfile[/^CHECKSUMS\n(.*?)(?=^\S|\z)/m, 1]
+
+  expected = specs.to_s.lines.map { |line| line[/^ {4}(\S+ \([^)]+\))$/, 1] }.compact
+  checksums = section.to_s.lines.map { |line| line[/^ {2}(\S+ \([^)]+\)) sha256=[0-9a-f]{64}$/, 1] }.compact
+
+  (!app_lockfile.include?("\nCHECKSUMS\n") || section) && (expected - checksums).empty?
+rescue StandardError
+  nil
 end
 
 example 'gem datadog should have require option' do |context|

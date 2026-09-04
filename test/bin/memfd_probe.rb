@@ -1,0 +1,44 @@
+# ruby-version-min: 2.6
+
+if defined?(Bundler) && ENV['DD_INTERNAL_RUBY_INJECTOR_BUNDLE'] == 'true'
+  gemfile_path = Bundler.default_gemfile.to_s
+  lockfile_path = Bundler.default_lockfile.to_s
+  gemfile_disk = File.read(gemfile_path)
+  gemfile_mem = Bundler.read_file(gemfile_path)
+  lockfile_disk = File.read(lockfile_path)
+  lockfile_mem = Bundler.read_file(lockfile_path)
+
+  ffi = lockfile_mem.lines.grep(/^    ffi/)
+  nokogiri = lockfile_mem.lines.grep(/^    nokogiri/)
+  datadog_pattern = /^    datadog \(([^)]+)\)/
+  app_datadog = lockfile_disk.lines.grep(datadog_pattern).map { |line| line[datadog_pattern, 1] }
+  injected_datadog = lockfile_mem.lines.grep(datadog_pattern).map { |line| line[datadog_pattern, 1] }
+  specs = lockfile_mem[/^GEM\n.*?^  specs:\n(.*?)(?=^\S|\z)/m, 1]
+  checksum_section = lockfile_mem[/^CHECKSUMS\n(.*?)(?=^\S|\z)/m, 1]
+  expected_checksums = specs.to_s.lines.map { |line| line[/^ {4}(\S+ \([^)]+\))$/, 1] }.compact
+  checksums = checksum_section.to_s.lines.map { |line| line[/^ {2}(\S+ \([^)]+\)) sha256=[0-9a-f]{64}$/, 1] }.compact
+  transitive_versions_preserved = %w[ffi msgpack].all? do |name|
+    pattern = /^    #{name} \(([^)]+)\)/
+    lockfile_disk.lines.grep(pattern).map { |line| line[pattern, 1] }.sort ==
+      lockfile_mem.lines.grep(pattern).map { |line| line[pattern, 1] }.sort
+  end
+  fd = ENV['DD_INTERNAL_RUBY_INJECTOR_MEMFD']
+  seals = IO.new(fd.to_i, 'rb', :autoclose => false).fcntl(1034) rescue nil
+
+  puts "injector-probe:gemfile_patched=#{gemfile_disk != gemfile_mem}"
+  puts "injector-probe:lockfile_patched=#{lockfile_disk != lockfile_mem}"
+  puts "injector-probe:gemfile_datadog=#{gemfile_mem.include?('gem "datadog"')}"
+  puts "injector-probe:gemfile_datadog_count=#{gemfile_mem.lines.grep(/^gem [\"']datadog[\"']/).size}"
+  puts "injector-probe:lockfile_datadog=#{lockfile_mem.include?(' datadog ')}"
+  puts "injector-probe:datadog_require=#{gemfile_mem =~ /gem \"datadog\".*(?::require\s*=>\s*|require:\s*)\"datadog\/single_step_instrument\"/ ? true : false}"
+  puts "injector-probe:ffi_app_version=#{ffi.any? && ffi.all? { |line| line =~ /\(1\.17\.\d+.*\)/ } ? true : false}"
+  puts "injector-probe:nokogiri_binary=#{nokogiri.any? && nokogiri.all? { |line| line =~ /\(.*-.*\)/ } ? true : false}"
+  puts "injector-probe:checksum_mode_preserved=#{lockfile_disk.include?("\nCHECKSUMS\n") == lockfile_mem.include?("\nCHECKSUMS\n")}"
+  puts "injector-probe:checksums_complete=#{checksum_section && (expected_checksums - checksums).empty? ? true : false}"
+  puts "injector-probe:datadog_version_preserved=#{app_datadog.any? && app_datadog == injected_datadog}"
+  puts "injector-probe:transitive_gems_absent=#{gemfile_mem.lines.grep(/^gem [\"'](?:ffi|msgpack)[\"']/).empty?}"
+  puts "injector-probe:transitive_versions_preserved=#{transitive_versions_preserved}"
+  puts "injector-probe:memfd_sealed=#{seals && seals & 15 == 15 ? true : false}"
+  puts "injector-probe:legacy_env=#{!!(ENV['DD_INTERNAL_RUBY_INJECTOR_GEMFILE_CONTENT'] || ENV['DD_INTERNAL_RUBY_INJECTOR_LOCKFILE_CONTENT'])}"
+
+end

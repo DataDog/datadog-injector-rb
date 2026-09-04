@@ -567,6 +567,23 @@ SUITE = [
           'telemetry start should not include result report',
           'telemetry conclusion should include result report',
           'reported result type should be success',
+        ],
+        { fixture: 'transitive' } => [
+          'telemetry should include metadata.tracer_version',
+          'telemetry should include complete',
+          'telemetry should not include error',
+          'app gemfile should not include datadog',
+          'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
+          'new gemfile should include datadog',
+          'new lockfile should include datadog',
+          'gem datadog should have require option',
+          'new gemfile should not include transitive gems',
+          'transitive gems should have versions from app',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
         ]
       }
     }
@@ -716,6 +733,10 @@ example 'telemetry should include error' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' } }
 end
 
+example 'telemetry should not include error' do |context|
+  context.telemetry.none? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' } }
+end
+
 example 'error reason should include bundler.inject.resolve' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.error' && p['tags'].include?('reason:bundler.inject.resolve') } }
 end
@@ -748,6 +769,23 @@ end
 example 'gem ffi should have version from app' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   File.readlines(lockfile).grep(/^\s{4}ffi/).all?(%r{\(1\.17\.\d+.*\)}) rescue nil
+end
+
+example 'new gemfile should not include transitive gems' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/^gem ["'](?:ffi|msgpack)["']/).empty? rescue nil
+end
+
+example 'transitive gems should have versions from app' do |context|
+  app = File.readlines(File.join(context.path, 'Gemfile.lock'))
+  injected = File.readlines(File.join(context.path, 'datadog.gemfile.lock'))
+
+  %w[ffi msgpack].all? do |name|
+    pattern = /^\s{4}#{name} \(([^)]+)\)/
+    app.grep(pattern).map { |line| line[pattern, 1] }.sort == injected.grep(pattern).map { |line| line[pattern, 1] }.sort
+  end
+rescue StandardError
+  nil
 end
 
 example 'gem nokogiri should have binary resolutions' do |context|

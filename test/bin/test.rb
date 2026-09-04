@@ -442,6 +442,66 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'direct-setup', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'datadog should be loaded after fallback',
+        'datadog instrumentation should be required',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'gemdeps', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4', env: 'RUBYGEMS_GEMDEPS=-' },
+        { engine: 'ruby', version: '3.4', env: 'RUBYGEMS_GEMDEPS=gem.deps.rb' },
+      ] => [
+        'telemetry should include complete',
+        'datadog should be loaded after fallback',
+        'datadog instrumentation should be required',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'RubyGems gemdeps should select its dependency file',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'inline', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'inline definition should remain separate',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'child', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6', env: 'DD_TEST_BUNDLE_CHILD=plain' },
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=plain' },
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=nested-bundle-exec' },
+      ] => [
+        'telemetry should include complete',
+        'bundle child should reuse memfd',
+        'child should load datadog',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'unbundled-child', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=unbundled' },
+      ] => [
+        'telemetry should include complete',
+        'unbundled child should not inherit virtual bundle',
+        'unbundled child should close memfd',
+        'reported result type should be success',
+      ],
+    },
     [{ fixture: 'vendored', inject: true, injector: 'datadog', packaged: true }, { fixture: 'hot', env: 'BUNDLE_PATH=/bundle', inject: true, injector: 'datadog', packaged: true }] => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -831,6 +891,39 @@ example 'datadog should be loaded after fallback' do |context|
   context.stdout.include?('stub:hot datadog:true')
 end
 
+example 'datadog instrumentation should be required' do |context|
+  context.stdout.include?('injector-probe:instrumentation_required=true')
+end
+
+example 'bundler setup should not remain eager' do |context|
+  context.stdout.include?('injector-probe:bundler_setup_eager=false')
+end
+
+example 'RubyGems gemdeps should select its dependency file' do |context|
+  context.stdout.include?('injector-probe:gemdeps_selected=true')
+end
+
+example 'bundle child should reuse memfd' do |context|
+  classes = context.telemetry.map { |event| event['metadata']['result_class'] }.compact
+  classes.count('success') == 1 && classes.count('success_cached') >= 2
+end
+
+example 'child should load datadog' do |context|
+  context.stdout.scan('stub:hot datadog:true').size >= 2
+end
+
+example 'inline definition should remain separate' do |context|
+  context.stdout.include?('injector-probe:inline_datadog=false')
+end
+
+example 'unbundled child should not inherit virtual bundle' do |context|
+  context.stdout.scan('stub:hot datadog:true').size == 1
+end
+
+example 'unbundled child should close memfd' do |context|
+  context.stdout.include?('injector-probe:memfd_closed=true')
+end
+
 example 'payload content should not be stored in environment' do |context|
   context.stdout.include?('injector-probe:legacy_env=false')
 end
@@ -1166,9 +1259,31 @@ def main(argv)
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
           env['DD_TEST_MEMFD_PROBE'] = "#{INJECTION_DIR}/test/bin/memfd_probe.rb"
 
+          if group[:launch] == 'gemdeps'
+            FileUtils.cp('Gemfile.lock', 'gem.deps.rb.lock')
+          end
+
           network = group[:resolution] == :remote
 
-          pid, status, stdout, stderr = if lock
+          pid, status, stdout, stderr = if group[:launch] == 'direct-setup'
+                          run env, *['ruby', '-e', 'require "bundler/setup"; Bundler.require; load "./stub.rb"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run direct Bundler setup'
+                        elsif group[:launch] == 'gemdeps'
+                          run env, *['ruby', '-e', 'Gem.use_gemdeps; Bundler.require; load "./stub.rb"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run RubyGems gemdeps setup'
+                        elsif group[:launch] == 'inline'
+                          run env, *['ruby', '-e', 'require "bundler/inline"; gemfile { source "https://rubygems.org"; gem "rack" }; puts "injector-probe:inline_datadog=#{Gem.loaded_specs.key?("datadog")}"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run inline Bundler setup'
+                        elsif lock
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,

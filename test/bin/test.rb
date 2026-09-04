@@ -816,7 +816,11 @@ example 'new lockfile should have complete checksums' do |context|
   expected = specs.to_s.lines.map { |line| line[/^ {4}(\S+ \([^)]+\))$/, 1] }.compact
   checksums = section.to_s.lines.map { |line| line[/^ {2}(\S+ \([^)]+\)) sha256=[0-9a-f]{64}$/, 1] }.compact
 
-  (!app_lockfile.include?("\nCHECKSUMS\n") || section) && (expected - checksums).empty?
+  if app_lockfile.include?("\nCHECKSUMS\n")
+    section && (expected - checksums).empty?
+  else
+    true
+  end
 rescue StandardError
   nil
 end

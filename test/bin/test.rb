@@ -359,11 +359,11 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
-          'new lockfile should preserve checksum mode',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
+          'virtual lockfile should preserve checksum mode',
           'gem datadog should have require option',
           'telemetry start should not include result report',
           'telemetry conclusion should include result report',
@@ -383,12 +383,12 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
-          'new lockfile should preserve checksum mode',
-          'new lockfile should have complete checksums',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
+          'virtual lockfile should preserve checksum mode',
+          'virtual lockfile should have complete checksums',
           'gem datadog should have require option',
           'telemetry start should not include result report',
           'telemetry conclusion should include result report',
@@ -412,10 +412,12 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should be available',
+        'virtual lockfile should be available',
+        'virtual gemfile should include datadog',
+        'virtual lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -438,13 +440,93 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should be available',
+        'virtual lockfile should be available',
+        'virtual gemfile should include datadog',
+        'virtual lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
+        'memfd should be sealed',
+        'memfd should be reused',
+        'payload content should not be stored in environment',
+        'generated bundle files should not exist',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', env: 'DD_INTERNAL_RUBY_INJECTOR_DISABLE_MEMFD=true', inject: true, injector: 'datadog', memfd: 'fallback', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
+        'datadog should be loaded after fallback',
+        'missing memfd should re-resolve',
+        'payload content should not be stored in environment',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'direct-setup', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'datadog should be loaded after fallback',
+        'datadog instrumentation should be required',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'gemdeps', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4', env: 'RUBYGEMS_GEMDEPS=-' },
+        { engine: 'ruby', version: '3.4', env: 'RUBYGEMS_GEMDEPS=gem.deps.rb' },
+      ] => [
+        'telemetry should include complete',
+        'datadog should be loaded after fallback',
+        'datadog instrumentation should be required',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'RubyGems gemdeps should select its dependency file',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'inline', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4' },
+      ] => [
+        'telemetry should include complete',
+        'inline definition should remain separate',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'child', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6', env: 'DD_TEST_BUNDLE_CHILD=plain' },
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=plain' },
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=nested-bundle-exec' },
+      ] => [
+        'telemetry should include complete',
+        'bundle child should reuse memfd',
+        'child should load datadog',
+        'memfd should be sealed',
+        'bundler setup should not remain eager',
+        'reported result type should be success',
+      ],
+    },
+    { fixture: 'hot', inject: true, injector: 'datadog', launch: 'unbundled-child', packaged: true } => {
+      [
+        { engine: 'ruby', version: '3.4', env: 'DD_TEST_BUNDLE_CHILD=unbundled' },
+      ] => [
+        'telemetry should include complete',
+        'unbundled child should not inherit virtual bundle',
+        'unbundled child should close memfd',
         'reported result type should be success',
       ],
     },
@@ -464,10 +546,12 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should be available',
+        'virtual lockfile should be available',
+        'virtual gemfile should include datadog',
+        'virtual lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -490,10 +574,12 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should be available',
+        'virtual lockfile should be available',
+        'virtual gemfile should include datadog',
+        'virtual lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -516,10 +602,12 @@ SUITE = [
         'telemetry should include complete',
         'app gemfile should not include datadog',
         'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should be available',
+        'virtual lockfile should be available',
+        'virtual gemfile should include datadog',
+        'virtual lockfile should include datadog',
+        'gemfile should be patched in memory',
+        'lockfile should be patched in memory',
         'gem datadog should have require option',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
@@ -543,10 +631,12 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem nokogiri should have binary resolutions',
           'telemetry start should not include result report',
@@ -558,10 +648,12 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem ffi should have version from app',
           'telemetry start should not include result report',
@@ -586,10 +678,12 @@ SUITE = [
           'telemetry should include complete',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
+          'gemfile should be patched in memory',
+          'lockfile should be patched in memory',
           'gem datadog should have require option',
           'gem ffi should have version from app',
           'telemetry start should not include result report',
@@ -602,12 +696,12 @@ SUITE = [
           'telemetry should not include error',
           'app gemfile should not include datadog',
           'app lockfile should not include datadog',
-          'new gemfile should exist',
-          'new lockfile should exist',
-          'new gemfile should include datadog',
-          'new lockfile should include datadog',
+          'virtual gemfile should be available',
+          'virtual lockfile should be available',
+          'virtual gemfile should include datadog',
+          'virtual lockfile should include datadog',
           'gem datadog should have require option',
-          'new gemfile should not include transitive gems',
+          'virtual gemfile should not include transitive gems',
           'transitive gems should have versions from app',
           'telemetry start should not include result report',
           'telemetry conclusion should include result report',
@@ -622,8 +716,8 @@ SUITE = [
         'telemetry should not include error',
         'app gemfile should include datadog',
         'app lockfile should include datadog',
-        'new gemfile should include one datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should include one datadog',
+        'virtual lockfile should include datadog',
         'gem datadog should not have require option',
         'gem datadog should have version from app',
         'telemetry start should not include result report',
@@ -636,8 +730,8 @@ SUITE = [
         'telemetry should not include error',
         'app gemfile should not include datadog',
         'app lockfile should include datadog',
-        'new gemfile should include one datadog',
-        'new lockfile should include datadog',
+        'virtual gemfile should include one datadog',
+        'virtual lockfile should include datadog',
         'gem datadog should have require option',
         'gem datadog should have version from app',
         'telemetry start should not include result report',
@@ -819,96 +913,60 @@ example 'app lockfile should include datadog' do |context|
   File.readlines(lockfile).grep(/^\s{4}datadog \(/).one? rescue nil
 end
 
-example 'new gemfile should include datadog' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.read(gemfile).include?('gem "datadog"') rescue nil
+example 'virtual gemfile should include datadog' do |context|
+  context.stdout.include?('injector-probe:gemfile_datadog=true')
 end
 
-example 'new gemfile should include one datadog' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/^gem ["']datadog["']/).one? rescue nil
+example 'virtual lockfile should include datadog' do |context|
+  context.stdout.include?('injector-probe:lockfile_datadog=true')
 end
 
-example 'new lockfile should include datadog' do |context|
-  lockfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.read(lockfile).include?(' datadog ') rescue nil
+example 'virtual gemfile should include one datadog' do |context|
+  context.stdout.include?('injector-probe:gemfile_datadog_count=1')
 end
 
-example 'new lockfile should preserve checksum mode' do |context|
-  app_lockfile = File.read(File.join(context.path, 'Gemfile.lock'))
-  injected_lockfile = File.read(File.join(context.path, 'datadog.gemfile.lock'))
-  app_lockfile.include?("\nCHECKSUMS\n") == injected_lockfile.include?("\nCHECKSUMS\n")
-rescue StandardError
-  nil
+example 'virtual lockfile should preserve checksum mode' do |context|
+  context.stdout.include?('injector-probe:checksum_mode_preserved=true')
 end
 
-example 'new lockfile should have complete checksums' do |context|
-  injected_lockfile = File.read(File.join(context.path, 'datadog.gemfile.lock'))
-  specs = injected_lockfile[/^GEM\n.*?^  specs:\n(.*?)(?=^\S|\z)/m, 1]
-  section = injected_lockfile[/^CHECKSUMS\n(.*?)(?=^\S|\z)/m, 1]
-
-  expected = specs.to_s.lines.map { |line| line[/^ {4}(\S+ \([^)]+\))$/, 1] }.compact
-  checksums = section.to_s.lines.map { |line| line[/^ {2}(\S+ \([^)]+\)) sha256=[0-9a-f]{64}$/, 1] }.compact
-
-  section && (expected - checksums).empty?
-rescue StandardError
-  nil
+example 'virtual lockfile should have complete checksums' do |context|
+  context.stdout.include?('injector-probe:checksums_complete=true')
 end
 
 example 'gem datadog should have require option' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/gem "datadog"/).any?(%r{(?::require\s*=>\s*|require:\s*)"datadog/single_step_instrument"}) rescue nil
+  context.stdout.include?('injector-probe:datadog_require=true')
 end
 
 example 'gem datadog should not have require option' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/^gem ["']datadog["']/).none?(%r{datadog/single_step_instrument}) rescue nil
+  context.stdout.include?('injector-probe:datadog_require=false')
 end
 
 example 'gem datadog should have version from app' do |context|
-  pattern = /^\s{4}datadog \(([^)]+)\)/
-  app = File.readlines(File.join(context.path, 'Gemfile.lock')).grep(pattern).map { |line| line[pattern, 1] }
-  injected = File.readlines(File.join(context.path, 'datadog.gemfile.lock')).grep(pattern).map { |line| line[pattern, 1] }
-  !app.empty? && app == injected
-rescue StandardError
-  nil
+  context.stdout.include?('injector-probe:datadog_version_preserved=true')
 end
 
 example 'gem ffi should have version from app' do |context|
-  lockfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(lockfile).grep(/^\s{4}ffi/).all?(%r{\(1\.17\.\d+.*\)}) rescue nil
+  context.stdout.include?('injector-probe:ffi_app_version=true')
 end
 
-example 'new gemfile should not include transitive gems' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.readlines(gemfile).grep(/^gem ["'](?:ffi|msgpack)["']/).empty? rescue nil
+example 'virtual gemfile should not include transitive gems' do |context|
+  context.stdout.include?('injector-probe:transitive_gems_absent=true')
 end
 
 example 'transitive gems should have versions from app' do |context|
-  app = File.readlines(File.join(context.path, 'Gemfile.lock'))
-  injected = File.readlines(File.join(context.path, 'datadog.gemfile.lock'))
-
-  %w[ffi msgpack].all? do |name|
-    pattern = /^\s{4}#{name} \(([^)]+)\)/
-    app.grep(pattern).map { |line| line[pattern, 1] }.sort == injected.grep(pattern).map { |line| line[pattern, 1] }.sort
-  end
-rescue StandardError
-  nil
+  context.stdout.include?('injector-probe:transitive_versions_preserved=true')
 end
 
 example 'gem nokogiri should have binary resolutions' do |context|
-  lockfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.readlines(lockfile).grep(/^\s{4}nokogiri/).all?(%r{\(.*-.*\)}) rescue nil
+  context.stdout.include?('injector-probe:nokogiri_binary=true')
 end
 
-example 'new gemfile should exist' do |context|
-  gemfile = File.join(context.path, 'datadog.gemfile')
-  File.exist?(gemfile)
+example 'virtual gemfile should be available' do |context|
+  context.stdout.include?('injector-probe:gemfile_patched=true')
 end
 
-example 'new lockfile should exist' do |context|
-  lockfile = File.join(context.path, 'datadog.gemfile.lock')
-  File.exist?(lockfile)
+example 'virtual lockfile should be available' do |context|
+  context.stdout.include?('injector-probe:lockfile_patched=true')
 end
 
 example 'new gemfile should not exist' do |context|
@@ -919,6 +977,73 @@ end
 example 'new lockfile should not exist' do |context|
   lockfile = File.join(context.path, 'datadog.gemfile.lock')
   !File.exist?(lockfile)
+end
+
+example 'gemfile should be patched in memory' do |context|
+  context.stdout.include?('injector-probe:gemfile_patched=true')
+end
+
+example 'lockfile should be patched in memory' do |context|
+  context.stdout.include?('injector-probe:lockfile_patched=true')
+end
+
+example 'memfd should be sealed' do |context|
+  context.stdout.include?('injector-probe:memfd_sealed=true')
+end
+
+example 'memfd should be reused' do |context|
+  classes = context.telemetry.map { |event| event['metadata']['result_class'] }.compact
+  classes.count('success') == 1 && classes.include?('success_cached')
+end
+
+example 'missing memfd should re-resolve' do |context|
+  context.telemetry.count { |event| event['metadata']['result_class'] == 'success' } >= 2
+end
+
+example 'datadog should be loaded after fallback' do |context|
+  context.stdout.include?('stub:hot datadog:true')
+end
+
+example 'datadog instrumentation should be required' do |context|
+  context.stdout.include?('injector-probe:instrumentation_required=true')
+end
+
+example 'bundler setup should not remain eager' do |context|
+  context.stdout.include?('injector-probe:bundler_setup_eager=false')
+end
+
+example 'RubyGems gemdeps should select its dependency file' do |context|
+  context.stdout.include?('injector-probe:gemdeps_selected=true')
+end
+
+example 'bundle child should reuse memfd' do |context|
+  classes = context.telemetry.map { |event| event['metadata']['result_class'] }.compact
+  classes.count('success') == 1 && classes.count('success_cached') >= 2
+end
+
+example 'child should load datadog' do |context|
+  context.stdout.scan('stub:hot datadog:true').size >= 2
+end
+
+example 'inline definition should remain separate' do |context|
+  context.stdout.include?('injector-probe:inline_datadog=false')
+end
+
+example 'unbundled child should not inherit virtual bundle' do |context|
+  context.stdout.scan('stub:hot datadog:true').size == 1
+end
+
+example 'unbundled child should close memfd' do |context|
+  context.stdout.include?('injector-probe:memfd_closed=true')
+end
+
+example 'payload content should not be stored in environment' do |context|
+  context.stdout.include?('injector-probe:legacy_env=false')
+end
+
+example 'generated bundle files should not exist' do |context|
+  !File.exist?(File.join(context.path, 'datadog.gemfile')) &&
+    !File.exist?(File.join(context.path, 'datadog.gemfile.lock'))
 end
 
 RUNTIMES = {
@@ -977,7 +1102,7 @@ def with_toolchain(*args)
   ['sh', '-c', 'if [ -f /opt/rh/devtoolset-10/enable ]; then . /opt/rh/devtoolset-10/enable; fi; exec "$@"', 'sh', *args]
 end
 
-def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true, readonly: false)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -1012,7 +1137,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
       --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
       --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
       --volume datadog-injector-rb-bundle-path-#{engine}-#{tag}-#{arch}:/bundle:rw
-      --volume #{Dir.pwd}:#{Dir.pwd}:rw
+      --volume #{Dir.pwd}:#{Dir.pwd}:#{readonly ? 'ro' : 'rw'}
       --workdir #{Dir.pwd}
       --platform linux/#{arch}
     ]
@@ -1030,6 +1155,8 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
 
   out_r, out_w = IO.pipe
   err_r, err_w = IO.pipe
+  stdout = +''
+  stderr = +''
 
   out_thr = Thread.new do
     mark = true
@@ -1042,6 +1169,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
       end
 
       data = io.read(1)
+      stdout << data
 
       if mark
         $stderr.write("┃ ")
@@ -1065,6 +1193,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
       end
 
       data = io.read(1)
+      stderr << data
 
       if mark
         $stderr.write("┇ ")
@@ -1090,6 +1219,8 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
     out_w.close
     err_w.close
   end
+
+  [_pid, status, stdout, stderr]
 ensure
   $stdout.write("┗━ ")
   if status
@@ -1103,11 +1234,13 @@ ensure
 end
 
 class Context
-  attr_reader :telemetry, :path
+  attr_reader :telemetry, :path, :stdout, :stderr
 
-  def initialize(telemetry: telemetry, path: path)
+  def initialize(telemetry: telemetry, path: path, stdout: stdout, stderr: stderr)
     @telemetry = telemetry
     @path = path
+    @stdout = stdout
+    @stderr = stderr
   end
 end
 
@@ -1243,18 +1376,43 @@ def main(argv)
           env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'remote' if group[:resolution] == :remote
 
           env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
+          env['DD_TEST_MEMFD_PROBE'] = "#{INJECTION_DIR}/test/bin/memfd_probe.rb"
+
+          if group[:launch] == 'gemdeps'
+            FileUtils.cp('Gemfile.lock', 'gem.deps.rb.lock')
+          end
 
           network = group[:resolution] == :remote
 
-          pid, status = if lock
+          pid, status, stdout, stderr = if group[:launch] == 'direct-setup'
+                          run env, *['ruby', '-e', 'require "bundler/setup"; Bundler.require; load "./stub.rb"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run direct Bundler setup'
+                        elsif group[:launch] == 'gemdeps'
+                          run env, *['ruby', '-e', 'Gem.use_gemdeps; Bundler.require; load "./stub.rb"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run RubyGems gemdeps setup'
+                        elsif group[:launch] == 'inline'
+                          run env, *['ruby', '-e', 'require "bundler/inline"; gemfile { source "https://rubygems.org"; gem "rack" }; puts "injector-probe:inline_datadog=#{Gem.loaded_specs.key?("datadog")}"'],
+                              engine: group[:engine], version: group[:version],
+                              network: network,
+                              readonly: !!group[:inject],
+                              title: 'run inline Bundler setup'
+                        elsif lock
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,
+                              readonly: !!group[:inject],
                               title: 'run fixture stub'
                         else
                           run env, *%W[ ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,
+                              readonly: !!group[:inject],
                               title: 'run fixture stub'
                         end
 
@@ -1279,8 +1437,8 @@ def main(argv)
               context = Context.new(
                 telemetry: telemetry,
                 path: Dir.pwd,
-
-                # TODO: add stdout+stderr
+                stdout: stdout,
+                stderr: stderr,
               )
 
               if test.nil?

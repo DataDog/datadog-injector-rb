@@ -14,3 +14,5 @@ if Gem.loaded_specs['datadog']
   require 'datadog'
   puts "stub:#{stub} datadog:#{!!defined?(Datadog)}"
 end
+
+load ENV['DD_TEST_MEMFD_PROBE'] if ENV['DD_TEST_MEMFD_PROBE']

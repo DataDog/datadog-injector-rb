@@ -1,8 +1,11 @@
 # ruby-version-min: 1.8.7
 
+MEMFD = import 'memfd'
+
 class << self
   def status
     require!
+    configure_gemdeps!
 
     {
       :rubygems                => Gem::VERSION,
@@ -34,7 +37,7 @@ class << self
     }
   end
 
-  def patch!
+  def patch!(payload)
     require!
 
     # Patch Bundler::Settings to neutralize deployment and vendored mode
@@ -69,37 +72,204 @@ class << self
     #    to Bundler.rubygems.gem_dir (i.e. Gem.dir), which is governed by
     #    GEM_HOME/GEM_PATH that we've already set up in injector.rb to include
     #    both the package gem home and the app's bundle path.
-    mod = Module.new do
-      def [](name)
-        return false if name == :deployment
-        return nil if name == :path
+    unless @settings_patched
+      mod = Module.new do
+        def [](name)
+          return false if name == :deployment
+          return nil if name == :path
 
-        super
+          super
+        end
+
+        def path
+          ::Bundler::Settings::Path.new(nil, true)
+        end
       end
 
-      def path
-        ::Bundler::Settings::Path.new(nil, true)
+      ::Bundler::Settings.prepend mod
+      @settings_patched = true
+    end
+
+    patch_exec!
+    patch_reads!(payload)
+  end
+
+  def patch_frozen!
+    return if @frozen_patched
+
+    mod = Module.new do
+      def [](name)
+        return false if name == :frozen
+
+        super
       end
     end
 
     ::Bundler::Settings.prepend mod
+    @frozen_patched = true
+  end
 
+  def patch_exec!
+    return if @exec_patched
+
+    require!
     require 'bundler/cli'
     require 'bundler/cli/exec'
 
+    patcher = self
     mod = Module.new do
-      def kernel_exec(*args)
-        ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r(\s*)\S+/(?:injector|host_inject|auto_inject)\.rb)(.*)$}, '\2 \1 \3')
-        ENV.delete('BUNDLER_SETUP')
+      define_method(:kernel_exec) do |*args|
+        patcher.prepare_child_environment!
+        MEMFD.preserve_exec!(args)
 
-        super
+        super(*args)
       end
     end
 
     ::Bundler::CLI::Exec.prepend mod
+    @exec_patched = true
+  end
+
+  def patch_environment!
+    return if @environment_patched
+
+    patcher = self
+    mod = Module.new do
+      define_method(:set_bundle_environment) do
+        result = super()
+        patcher.prepare_child_environment!
+        result
+      end
+    end
+
+    ::Bundler::SharedHelpers.singleton_class.prepend(mod)
+    @environment_patched = true
+  end
+
+  def patch_unbundled!
+    return if @unbundled_patched
+
+    mod = Module.new do
+      def unbundled_env
+        super.tap do |env|
+          env['DD_INTERNAL_RUBY_INJECTOR'] = 'false'
+          env.delete('DD_INTERNAL_RUBY_INJECTOR_BUNDLE')
+          env.delete('DD_INTERNAL_RUBY_INJECTOR_MEMFD')
+          env.delete('DD_INTERNAL_RUBY_INJECTOR_PATCH')
+        end
+      end
+
+      def unbundled_system(*args)
+        MEMFD.close_exec!(args)
+        super(*args)
+      end
+
+      def unbundled_exec(*args)
+        MEMFD.close_exec!(args)
+        super(*args)
+      end
+    end
+
+    ::Bundler.singleton_class.prepend(mod)
+    @unbundled_patched = true
+  end
+
+  def prepare_child_environment!
+    rubyopt = ENV['RUBYOPT']
+    return unless rubyopt
+
+    injector_pattern = %r{(?:\A|\s)(-r\s*\S*/(?:injector|host_inject|auto_inject)\.rb)(?=\s|\z)}
+    injector_match = rubyopt.match(injector_pattern)
+    return unless injector_match
+
+    injector = injector_match[1]
+    rest = rubyopt.sub(injector_match[0], ' ').strip
+    ENV['RUBYOPT'] = rest.empty? ? injector : "#{injector} #{rest}"
+    ENV.delete('BUNDLER_SETUP')
+  end
+
+  def patch_reads!(payload)
+    require!
+    @read_payload = payload
+    patch_frozen!
+    patch_environment!
+    patch_unbundled!
+    patch_runtime_lock!
+
+    return if @reads_patched
+
+    patcher = self
+    mod = Module.new do
+      define_method(:read_file) do |file|
+        content = patcher.virtual_file(file)
+        content ? content.dup : super(file)
+      end
+    end
+
+    ::Bundler.singleton_class.prepend(mod)
+    @reads_patched = true
+  end
+
+  def patch_runtime_lock!
+    return if @runtime_lock_patched
+
+    patcher = self
+    mod = Module.new do
+      define_method(:lock) do |*args|
+        patcher.virtual_lockfile?(@definition) ? nil : super(*args)
+      end
+    end
+
+    ::Bundler::Runtime.prepend(mod)
+    @runtime_lock_patched = true
+  end
+
+  def virtual_file(file)
+    return unless @read_payload
+
+    path = File.expand_path(file.to_s)
+    case path
+    when @read_payload[:gemfile_path]
+      @read_payload[:gemfile_content]
+    when @read_payload[:lockfile_path]
+      @read_payload[:lockfile_content]
+    end
+  end
+
+  def virtual_lockfile?(definition)
+    return false unless @read_payload
+
+    lockfile = definition.instance_variable_get(:@lockfile)
+    lockfile && File.expand_path(lockfile.to_s) == @read_payload[:lockfile_path]
   end
 
   private
+
+  def configure_gemdeps!
+    return if ENV['BUNDLE_GEMFILE']
+
+    path = ENV['RUBYGEMS_GEMDEPS']
+    return if !path || path.empty?
+
+    path = discover_gemdeps if path == '-'
+    ENV['BUNDLE_GEMFILE'] = File.expand_path(path) if path && File.file?(path)
+  end
+
+  def discover_gemdeps
+    directory = File.expand_path(Dir.pwd)
+    names = defined?(Gem::GEM_DEP_FILES) ? Gem::GEM_DEP_FILES : %w[gem.deps.rb gems.rb Gemfile Isolate]
+
+    loop do
+      names.each do |name|
+        path = File.join(directory, name)
+        return path if File.file?(path)
+      end
+
+      parent = File.expand_path('..', directory)
+      return if parent == directory
+      directory = parent
+    end
+  end
 
   def require!
     # require rubygems first, otherwise there may be a per-file mixup between

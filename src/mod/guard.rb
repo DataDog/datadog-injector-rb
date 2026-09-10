@@ -56,10 +56,6 @@ class << self
       result << { :name => 'bundler.locked', :reason => 'bundler.unlocked' }
     end
 
-    if !status[:inject][:ruby][:force]['fs.writable'] && !status[:fs][:writable]
-      result << { :name => 'fs.writable', :reason => 'fs.readonly' }
-    end
-
     result unless result.empty?
   end
 

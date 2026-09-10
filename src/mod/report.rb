@@ -16,7 +16,6 @@ class << self
     when 'bundler.unlocked'              then 'incompatible_component'
     when 'bundler.vendored'              then 'incompatible_environment'
     when 'bundler.version.simulated'     then 'incompatible_environment'
-    when 'bundler.platform.forced'       then 'incompatible_environment'
 
     # error reasons
     when 'bundler.inject'                then 'incompatible_dependency'
@@ -54,8 +53,6 @@ class << self
       'The Ruby process has no dependency lock (no Gemfile.lock found)'
     when 'bundler.vendored'
       'Bundler is configured to ignore gems out of the vendored path'
-    when 'bundler.platform.forced'
-      'Bundler is configured to force an incompatible or restricted gem platform'
     when 'fs.readonly'
       'The Gemfile directory is read-only'
 

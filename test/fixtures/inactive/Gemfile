@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
 gem 'rack'
+gem 'paint', '= 2.3.0'
 
 group :inactive do
   gem 'inactive_dependencies', path: 'inactive_dependencies'

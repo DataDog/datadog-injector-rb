@@ -52,14 +52,20 @@ module Patch
         # Datadog root so Bundler applies the single-step require option.
         begin
           original_definition = builder.to_definition(lockfile_path, {})
-          resolved = original_definition.resolve
-          requested = original_definition.requested_dependencies
+          app_specs = begin
+                        original_definition.specs
+                      rescue Bundler::GemNotFound
+                        # Installed variants take precedence when available. Otherwise,
+                        # inspect the active lock graph without requiring installed gems.
+                        resolved = original_definition.resolve
+                        requested = original_definition.requested_dependencies
 
-          # SpecSet#for dropped its check argument in Bundler 4.
-          app_specs = if Gem::Requirement.new('< 4').satisfied_by? Gem::Version.new(Bundler::VERSION)
-                        resolved.for(requested, false, [Bundler.local_platform])
-                      else
-                        resolved.for(requested, [Bundler.local_platform])
+                        # SpecSet#for changed its second argument in Bundler 2.6.
+                        if Gem::Requirement.new('< 2.6').satisfied_by? Gem::Version.new(Bundler::VERSION)
+                          resolved.for(requested, false, [Bundler.local_platform])
+                        else
+                          resolved.for(requested, [Bundler.local_platform])
+                        end
                       end
           app_spec_names = app_specs.map { |spec| spec.name }
         rescue StandardError => e
@@ -240,7 +246,7 @@ class << self
 
     # TODO: capture stdout+stderr
     gemfile, err, msg, cause = CONTEXT.isolate do
-      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{ENV['GEM_PATH']}" }
+      Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{context[:bundler][:bundle_path]}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
 

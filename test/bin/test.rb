@@ -526,35 +526,44 @@ SUITE = [
         'reported result type should be success',
       ],
     },
-    { fixture: 'partial', bundle: 'locked', install: false, command: 'install', env: 'BUNDLE_PATH=vendor/partial', inject: true, injector: 'datadog', packaged: true } => {
+    { fixture: 'partial', isolated: true, inject: true, injector: 'datadog', packaged: true } => {
       [
-        { engine: 'ruby', version: '2.6' },
-        { engine: 'ruby', version: '4.0' },
-      ] => [
+        { install: false, command: 'install', env: 'BUNDLE_PATH=vendor/partial' },
+        { env: 'BUNDLE_PATH=vendor/partial' },
+        { env: 'BUNDLE_DEPLOYMENT=true' },
+      ] => {
+        [
+          { engine: 'ruby', version: '2.6' },
+          { engine: 'ruby', version: '3.4' },
+          { engine: 'ruby', version: '4.0' },
+        ] => [
+          'telemetry should include metadata.tracer_version',
+          'telemetry should include complete',
+          'telemetry should not include error',
+          'app gemfile should not include datadog',
+          'app lockfile should not include datadog',
+          'new gemfile should exist',
+          'new lockfile should exist',
+          'new gemfile should include datadog',
+          'new lockfile should include datadog',
+          'gem datadog should have require option',
+          'telemetry start should not include result report',
+          'telemetry conclusion should include result report',
+          'reported result type should be success',
+        ],
+      },
+    },
+    { fixture: 'inactive', isolated: true, env: 'BUNDLE_PATH=vendor/inactive', inject: true, injector: 'datadog', packaged: true, engine: 'ruby', version: '2.6' } => {
+      [{}, { install: false, command: 'install' }] => [
         'telemetry should include metadata.tracer_version',
         'telemetry should include complete',
         'telemetry should not include error',
-        'app gemfile should not include datadog',
-        'app lockfile should not include datadog',
-        'new gemfile should exist',
-        'new lockfile should exist',
-        'new gemfile should include datadog',
-        'new lockfile should include datadog',
-        'gem datadog should have require option',
+        'new gemfile should include did_you_mean',
         'telemetry start should not include result report',
         'telemetry conclusion should include result report',
         'reported result type should be success',
       ],
     },
-    { fixture: 'inactive', inject: true, injector: 'datadog', packaged: true, engine: 'ruby', version: '2.6' } => [
-      'telemetry should include metadata.tracer_version',
-      'telemetry should include complete',
-      'telemetry should not include error',
-      'new gemfile should include did_you_mean',
-      'telemetry start should not include result report',
-      'telemetry conclusion should include result report',
-      'reported result type should be success',
-    ],
     { inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -625,7 +634,7 @@ SUITE = [
           'telemetry conclusion should include result report',
           'reported result type should be success',
         ],
-        { fixture: 'transitive' } => [
+        [{ fixture: 'transitive' }, { fixture: 'transitive', isolated: true, env: 'BUNDLE_PATH=vendor/transitive' }] => [
           'telemetry should include metadata.tracer_version',
           'telemetry should include complete',
           'telemetry should not include error',
@@ -1011,7 +1020,7 @@ def with_toolchain(*args)
   ['sh', '-c', 'if [ -f /opt/rh/devtoolset-10/enable ]; then . /opt/rh/devtoolset-10/enable; fi; exec "$@"', 'sh', *args]
 end
 
-def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
+def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true, isolated: false)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -1042,10 +1051,13 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true)
     ] unless network
 
     cmd += %W[
-      --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
       --volume datadog-injector-rb-bundle-shared-#{engine}-#{tag}-#{arch}:/usr/local/bundle:rw
       --volume datadog-injector-rb-bundle-deployment-#{engine}-#{tag}-#{arch}:#{Dir.pwd}/vendor/bundle:rw
       --volume datadog-injector-rb-bundle-path-#{engine}-#{tag}-#{arch}:/bundle:rw
+    ] unless isolated
+
+    cmd += %W[
+      --volume #{INJECTION_DIR}:#{INJECTION_DIR}:rw
       --volume #{Dir.pwd}:#{Dir.pwd}:rw
       --workdir #{Dir.pwd}
       --platform linux/#{arch}
@@ -1228,7 +1240,7 @@ def main(argv)
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
-            pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], title: 'lock fixture'
+            pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], isolated: group[:isolated], title: 'lock fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
               puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1247,7 +1259,7 @@ def main(argv)
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
             if group[:install] != false
-              pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'install fixture'
+              pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], isolated: group[:isolated], title: 'install fixture'
               if status.exitstatus != 0
                 puts "╭─────┈┄╌"
                 puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1285,16 +1297,19 @@ def main(argv)
           pid, status = if group[:command] == 'install'
                           run env, *with_toolchain('bundle', 'install'),
                               engine: group[:engine], version: group[:version],
+                              isolated: group[:isolated],
                               network: true,
                               title: 'install fixture with injection'
                         elsif lock
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
+                              isolated: group[:isolated],
                               network: network,
                               title: 'run fixture stub'
                         else
                           run env, *%W[ ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
+                              isolated: group[:isolated],
                               network: network,
                               title: 'run fixture stub'
                         end

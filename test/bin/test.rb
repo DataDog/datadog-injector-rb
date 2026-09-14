@@ -688,6 +688,12 @@ SUITE = [
   ]
 ]
 
+def merge_dimensions(inherited, local)
+  inherited.merge(local) do |key, left, right|
+    key == :env ? Array(left) + Array(right) : right
+  end
+end
+
 def flatten(val, ele=nil, acc=nil)
   ele ||= {}
   acc ||= []
@@ -703,14 +709,21 @@ def flatten(val, ele=nil, acc=nil)
       when Symbol, String
         flatten(v, ele.merge(k => true), acc)
       when Array
-        k.each { |kv| flatten(v, ele.merge(kv), acc) }
+        k.each { |kv| flatten(v, merge_dimensions(ele, kv), acc) }
       when Hash
-        flatten(v, ele.merge(k), acc)
+        flatten(v, merge_dimensions(ele, k), acc)
       end
     end
   end
 
   acc
+end
+
+def environment(group)
+  Array(group[:env]).each_with_object({}) do |assignment, env|
+    key, value = assignment.split('=', 2)
+    env[key] = value
+  end
 end
 
 EXAMPLES = {}
@@ -1250,12 +1263,7 @@ def main(argv)
               next
             end
 
-            env = if (e = group[:env])
-                    k, v = e.split('=', 2)
-                    { k => v }
-                  else
-                    {}
-                  end
+            env = environment(group)
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
             if group[:install] != false
@@ -1271,12 +1279,7 @@ def main(argv)
             end
           end
 
-          env = if (e = group[:env])
-                  k, v = e.split('=', 2)
-                  { k => v }
-                else
-                  {}
-                end
+          env = environment(group)
           env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
           env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
           env = { 'DD_TELEMETRY_FORWARDER_LOG' => "#{tmp}/forwarder.log" }.merge(env)

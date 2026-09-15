@@ -526,6 +526,26 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'partial', bundle: 'locked', install: false, command: 'install', env: 'BUNDLE_PATH=vendor/partial', inject: true, injector: 'datadog', packaged: true } => {
+      [
+        { engine: 'ruby', version: '2.6' },
+        { engine: 'ruby', version: '4.0' },
+      ] => [
+        'telemetry should include metadata.tracer_version',
+        'telemetry should include complete',
+        'telemetry should not include error',
+        'app gemfile should not include datadog',
+        'app lockfile should not include datadog',
+        'new gemfile should exist',
+        'new lockfile should exist',
+        'new gemfile should include datadog',
+        'new lockfile should include datadog',
+        'gem datadog should have require option',
+        'telemetry start should not include result report',
+        'telemetry conclusion should include result report',
+        'reported result type should be success',
+      ],
+    },
     { inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -1212,14 +1232,16 @@ def main(argv)
                   end
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
-            pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'install fixture'
-            if status.exitstatus != 0
-              puts "╭─────┈┄╌"
-              puts "│ ERR: #{group.inspect} uuid: #{uuid}"
-              puts "╰─────┈┄╌"
+            if group[:install] != false
+              pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'install fixture'
+              if status.exitstatus != 0
+                puts "╭─────┈┄╌"
+                puts "│ ERR: #{group.inspect} uuid: #{uuid}"
+                puts "╰─────┈┄╌"
 
-              err << group
-              next
+                err << group
+                next
+              end
             end
           end
 
@@ -1246,7 +1268,12 @@ def main(argv)
 
           network = group[:resolution] == :remote
 
-          pid, status = if lock
+          pid, status = if group[:command] == 'install'
+                          run env, *with_toolchain('bundle', 'install'),
+                              engine: group[:engine], version: group[:version],
+                              network: true,
+                              title: 'install fixture with injection'
+                        elsif lock
                           run env, *%W[ bundle exec ruby stub.rb ],
                               engine: group[:engine], version: group[:version],
                               network: network,

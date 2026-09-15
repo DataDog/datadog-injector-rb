@@ -52,7 +52,7 @@ module Patch
         # Datadog root so Bundler applies the single-step require option.
         begin
           original_definition = builder.to_definition(lockfile_path, {})
-          app_spec_names = original_definition.specs.map { |spec| spec.name }
+          app_spec_names = original_definition.resolve.map { |spec| spec.name }
         rescue StandardError => e
           raise ResolutionError.new("Failed to resolve original gemfile", e)
         end

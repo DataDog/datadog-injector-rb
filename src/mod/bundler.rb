@@ -84,8 +84,8 @@ class << self
 
     ::Bundler::Settings.prepend mod
 
-    require 'bundler/cli'
-    require 'bundler/cli/exec'
+    require! 'bundler/cli'
+    require! 'bundler/cli/exec'
 
     mod = Module.new do
       def kernel_exec(*args)
@@ -101,11 +101,33 @@ class << self
 
   private
 
-  def require!
+  def require!(feature = 'bundler')
     # require rubygems first, otherwise there may be a per-file mixup between
     # bundler versions (observed: stdlib vs gem home)
     require 'rubygems'
 
-    require 'bundler'
+    unless defined?(@bundler_require_path)
+      # RUBYOPT loads the injector before RubyGems' `bundle` wrapper can
+      # activate Bundler. Activate it here so later CLI loads use one root.
+      version = nil
+      if %w[bundle bundler].include?(File.basename($0)) && ARGV.first
+        argument = ARGV.first
+        argument = argument.dup.force_encoding('BINARY') if argument.respond_to?(:force_encoding)
+        version = $1 if argument =~ /\A_(.*)_\z/ && Gem::Version.correct?($1)
+      end
+
+      version ? gem('bundler', version) : gem('bundler')
+
+      spec = Gem.loaded_specs['bundler']
+      @bundler_require_path = spec.full_require_paths.find do |path|
+        File.file?(File.join(path, 'bundler.rb'))
+      end
+    end
+
+    if @bundler_require_path
+      require File.join(@bundler_require_path, feature)
+    else
+      require feature
+    end
   end
 end

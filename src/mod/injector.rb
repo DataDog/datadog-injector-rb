@@ -52,7 +52,16 @@ module Patch
         # Datadog root so Bundler applies the single-step require option.
         begin
           original_definition = builder.to_definition(lockfile_path, {})
-          app_spec_names = original_definition.resolve.map { |spec| spec.name }
+          resolved = original_definition.resolve
+          requested = original_definition.requested_dependencies
+
+          # SpecSet#for dropped its check argument in Bundler 4.
+          app_specs = if Gem::Requirement.new('< 4').satisfied_by? Gem::Version.new(Bundler::VERSION)
+                        resolved.for(requested, false, [Bundler.local_platform])
+                      else
+                        resolved.for(requested, [Bundler.local_platform])
+                      end
+          app_spec_names = app_specs.map { |spec| spec.name }
         rescue StandardError => e
           raise ResolutionError.new("Failed to resolve original gemfile", e)
         end

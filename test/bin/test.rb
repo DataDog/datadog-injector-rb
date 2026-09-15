@@ -546,6 +546,15 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'inactive', inject: true, injector: 'datadog', packaged: true, engine: 'ruby', version: '2.6' } => [
+      'telemetry should include metadata.tracer_version',
+      'telemetry should include complete',
+      'telemetry should not include error',
+      'new gemfile should include did_you_mean',
+      'telemetry start should not include result report',
+      'telemetry conclusion should include result report',
+      'reported result type should be success',
+    ],
     { inject: true, injector: 'datadog', packaged: true } => {
       [
         { engine: 'ruby', version: '2.6' },
@@ -892,6 +901,11 @@ example 'gem datadog should have version from app' do |context|
   !app.empty? && app == injected
 rescue StandardError
   nil
+end
+
+example 'new gemfile should include did_you_mean' do |context|
+  gemfile = File.join(context.path, 'datadog.gemfile')
+  File.readlines(gemfile).grep(/^gem ["']did_you_mean["']/).one? rescue nil
 end
 
 example 'gem ffi should have version from app' do |context|

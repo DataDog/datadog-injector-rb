@@ -101,6 +101,28 @@ class << self
 
   private
 
+  def bundler_launcher?
+    paths = [$0]
+
+    begin
+      if File.respond_to?(:realpath)
+        paths << File.realpath($0)
+      else
+        path = $0
+        16.times do
+          break unless File.symlink?(path)
+
+          path = File.expand_path(File.readlink(path), File.dirname(path))
+        end
+        paths << path
+      end
+    rescue SystemCallError
+      # Fall back to the invoked name when the target cannot be resolved.
+    end
+
+    paths.any? { |path| File.basename(path) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/ }
+  end
+
   def require!(feature = 'bundler')
     # require rubygems first, otherwise there may be a per-file mixup between
     # bundler versions (observed: stdlib vs gem home)
@@ -110,7 +132,7 @@ class << self
       # RUBYOPT loads the injector before RubyGems' `bundle` wrapper can
       # activate Bundler. Activate it here so later CLI loads use one root.
       version = nil
-      if File.basename($0) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/ && ARGV.first
+      if bundler_launcher? && ARGV.first
         argument = ARGV.first
         argument = argument.dup.force_encoding('BINARY') if argument.respond_to?(:force_encoding)
         version = $1 if argument =~ /\A_(.*)_\z/ && Gem::Version.correct?($1)

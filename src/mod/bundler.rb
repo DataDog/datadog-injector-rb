@@ -84,12 +84,12 @@ class << self
 
     ::Bundler::Settings.prepend mod
 
-    require 'bundler/cli'
-    require 'bundler/cli/exec'
+    require! 'bundler/cli'
+    require! 'bundler/cli/exec'
 
     mod = Module.new do
       def kernel_exec(*args)
-        ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r(\s*)\S+/(?:injector|host_inject|auto_inject)\.rb)(.*)$}, '\2 \1 \3')
+        ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r\s*\S+/(?:injector|host_inject|auto_inject)\.rb)(.*)$}, '\2 \1 \3')
         ENV.delete('BUNDLER_SETUP')
 
         super
@@ -101,11 +101,55 @@ class << self
 
   private
 
-  def require!
+  def bundler_launcher?
+    paths = [$0]
+
+    begin
+      if File.respond_to?(:realpath)
+        paths << File.realpath($0)
+      else
+        path = $0
+        16.times do
+          break unless File.symlink?(path)
+
+          path = File.expand_path(File.readlink(path), File.dirname(path))
+        end
+        paths << path
+      end
+    rescue SystemCallError
+      # Fall back to the invoked name when the target cannot be resolved.
+    end
+
+    paths.any? { |path| File.basename(path) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/ }
+  end
+
+  def require!(feature = 'bundler')
     # require rubygems first, otherwise there may be a per-file mixup between
     # bundler versions (observed: stdlib vs gem home)
     require 'rubygems'
 
-    require 'bundler'
+    unless defined?(@bundler_require_path)
+      # RUBYOPT loads the injector before RubyGems' `bundle` wrapper can
+      # activate Bundler. Activate it here so later CLI loads use one root.
+      version = nil
+      if bundler_launcher? && ARGV.first
+        argument = ARGV.first
+        argument = argument.dup.force_encoding('BINARY') if argument.respond_to?(:force_encoding)
+        version = $1 if argument =~ /\A_(.*)_\z/ && Gem::Version.correct?($1)
+      end
+
+      version ? gem('bundler', version) : gem('bundler')
+
+      spec = Gem.loaded_specs['bundler']
+      @bundler_require_path = spec.full_require_paths.find do |path|
+        File.file?(File.join(path, 'bundler.rb'))
+      end
+    end
+
+    if @bundler_require_path
+      require File.join(@bundler_require_path, feature)
+    else
+      require feature
+    end
   end
 end

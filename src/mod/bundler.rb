@@ -110,7 +110,7 @@ class << self
       # RUBYOPT loads the injector before RubyGems' `bundle` wrapper can
       # activate Bundler. Activate it here so later CLI loads use one root.
       version = nil
-      if %w[bundle bundler].include?(File.basename($0)) && ARGV.first
+      if File.basename($0) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/ && ARGV.first
         argument = ARGV.first
         argument = argument.dup.force_encoding('BINARY') if argument.respond_to?(:force_encoding)
         version = $1 if argument =~ /\A_(.*)_\z/ && Gem::Version.correct?($1)

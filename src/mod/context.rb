@@ -5,27 +5,63 @@ BUNDLER = import 'bundler'
 RUBY = import 'ruby'
 RUNTIME = import 'runtime'
 
+class IsolatedError < StandardError
+  MAX_CHAIN_LENGTH = 16
+
+  attr_reader :original_class, :original_ancestors, :original_message, :causes, :causes_truncated
+
+  def self.capture(exception)
+    exceptions = []
+    seen = []
+
+    while exception && exceptions.length < MAX_CHAIN_LENGTH && !seen.any? { |previous| previous.equal?(exception) }
+      seen << exception
+      # Copy strings too: subclasses and instance variables can reference child-only objects.
+      exceptions << {
+        :class_name => String.new(exception.class.name || exception.class.to_s),
+        :ancestors => exception.class.ancestors.map { |type| String.new(type.name || type.to_s) },
+        :message => String.new(exception.message),
+        :backtrace => exception.backtrace && exception.backtrace.map { |line| String.new(line) },
+      }
+      exception = exception.respond_to?(:cause) ? exception.cause : nil
+    end
+
+    { :exceptions => exceptions, :truncated => !!exception }
+  end
+
+  def initialize(data)
+    original = data[:exceptions].first
+    @original_class = original[:class_name]
+    @original_ancestors = original[:ancestors]
+    @original_message = original[:message]
+    @causes = data[:exceptions].drop(1)
+    @causes_truncated = data[:truncated]
+    super("#{@original_class}: #{@original_message}")
+    set_backtrace(original[:backtrace])
+  end
+end
+
 class << self
   def isolate(&block)
     # HACK: until context[:bundler] evaluation can be figured out for JRuby
     return block.call unless Process.respond_to?(:fork)
 
-    PROCESS.child_eval do
+    outcome, value = PROCESS.child_eval do
       begin
         $stdout.reopen('/dev/null', 'w')
         $stderr.reopen('/dev/null', 'w')
 
-        result = primitive(block.call)
+        [:ok, primitive(block.call)]
       rescue Exception => e
-        exc = StandardError.new "#{e.class.name}: #{e.message}"
-        exc.set_backtrace(e.backtrace)
+        [:error, IsolatedError.capture(e)]
       end
-
-      # raise outside of rescue to not set Exception#cause
-      raise exc if exc
-
-      result
     end
+
+    # Anonymous module classes cannot be marshalled. Box only in the parent,
+    # outside rescue, so Ruby cannot attach the original exception as its cause.
+    raise IsolatedError.new(value) if outcome == :error
+
+    value
   end
 
   def primitive(val)

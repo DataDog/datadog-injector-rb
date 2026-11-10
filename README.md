@@ -132,6 +132,21 @@ This project optionally uses Nix for simple development environment management. 
 1. [Install Nix](https://nixos.org/download/) if you haven't already
 2. Run `nix develop` (or its older incantation `nix-shell`)
 
+### Exceptions across process isolation
+
+`context.isolate` transports successful values and failures in separate result
+envelopes. Exceptions may reference classes loaded only in the child process,
+so failures cross the pipe as plain strings, arrays, and hashes. The parent
+raises a `context::IsolatedError`, a `StandardError` subclass within the imported
+module, without trying to load the original exception classes.
+
+The box exposes `original_class`, `original_ancestors`, `original_message`, and
+the original backtrace. `causes` contains textual snapshots of nested exceptions.
+Snapshots stop at a repeated exception or 16 exceptions in total;
+`causes_truncated` records whether more of the chain was omitted. The displayed
+message retains the `OriginalClass: message` format. Runtimes without `fork`
+continue to execute the block directly.
+
 ## License
 
 Copyright (c) Datadog, Inc. See `LICENSE` file.

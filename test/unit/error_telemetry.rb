@@ -13,18 +13,20 @@ module ErrorTelemetryTest
   end
 
   def Context.eval
-    raise Errno::EACCES, 'private context details' if ErrorTelemetryTest.stage == :context
+    isolate { raise Errno::EACCES, 'private context details' } if ErrorTelemetryTest.stage == :context
     {}
   end
 
   def Guard.call(context)
     raise NoMethodError, 'unexpected guard failure' if ErrorTelemetryTest.stage == :guard
+    return [{ :reason => 'bundler.unbundled' }] if ErrorTelemetryTest.stage == :abort
     nil
   end
 
   def Injector.call(context)
     raise Errno::ENOENT, 'private injection details' if ErrorTelemetryTest.stage == :injector
-    [nil, 'bundler.inject.resolve.injected.missing_gem']
+    return [true, nil] if ErrorTelemetryTest.stage == :complete
+    [nil, 'bundler.inject.resolve.injected.missing_gem', 'Bundler::GemNotFound']
   end
 
   def Telemetry.emit(points, options = {})
@@ -34,32 +36,47 @@ module ErrorTelemetryTest
   def self.run
     previous = ENV.delete('DD_INTERNAL_RUBY_INJECTOR')
     [
-      [:context, 'exc.context.permission_denied', 'incompatible_environment'],
-      [:guard, 'exc.guard.unknown', 'internal_error'],
-      [:injector, 'exc.injector.missing_file', 'incompatible_environment'],
-      [:reported, 'bundler.inject.resolve.injected.missing_gem', 'incompatible_dependency'],
-    ].each do |stage, reason, result_class|
-      self.stage = stage
-      self.events = []
-      main = Module.new do
-        def self.import(name); TestModules.import(name); end
-      end
-      path = File.expand_path('../../src/mod/main.rb', File.dirname(__FILE__))
-      main.module_eval(File.read(path), path)
+      [:context, 'exc.context.permission_denied', 'incompatible_environment', 'Errno::EACCES'],
+      [:guard, 'exc.guard.unknown', 'internal_error', 'NoMethodError'],
+      [:injector, 'exc.injector.missing_file', 'incompatible_environment', 'Errno::ENOENT'],
+      [:reported, 'bundler.inject.resolve.injected.missing_gem', 'incompatible_dependency', 'Bundler::GemNotFound'],
+    ].each do |stage, reason, result_class, type|
+      evaluate(stage)
 
       TestModules.assert_equal(2, events.length)
       TestModules.assert_equal('library_entrypoint.start', events.first[0].first[:name])
       TestModules.assert_equal([{
-        :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"],
+        :name => 'library_entrypoint.error', :tags => ["reason:#{reason}", "error_type:#{type}"],
       }], events.last[0])
       result = events.last[1][:result]
       TestModules.assert_equal('error', result[:result])
       TestModules.assert_equal(result_class, result[:result_class])
       TestModules.assert_equal(false, result[:result_reason].include?('private'))
     end
+
+    [:abort, :complete].each do |stage|
+      evaluate(stage)
+      TestModules.assert_equal(2, events.length)
+      TestModules.assert_equal("library_entrypoint.#{stage}", events.last[0].first[:name])
+      events.each do |points, _|
+        points.each do |point|
+          TestModules.assert_equal([], (point[:tags] || []).grep(/^error_type:/))
+        end
+      end
+    end
     puts 'Error telemetry: one conclusion, stage-specific reasons, and result metadata passed'
   ensure
     ENV['DD_INTERNAL_RUBY_INJECTOR'] = previous if previous
+  end
+
+  def self.evaluate(stage)
+    self.stage = stage
+    self.events = []
+    main = Module.new do
+      def self.import(name); TestModules.import(name); end
+    end
+    path = File.expand_path('../../src/mod/main.rb', File.dirname(__FILE__))
+    main.module_eval(File.read(path), path)
   end
 end
 

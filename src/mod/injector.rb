@@ -248,7 +248,7 @@ class << self
     package_lockfile = context[:inject][:ruby][:package][:lockfile]
 
     # TODO: capture stdout+stderr
-    gemfile, err, msg, cause = CONTEXT.isolate do
+    gemfile, err, msg, cause, error_type = CONTEXT.isolate do
       Gem.paths = { 'GEM_PATH' => "#{package_gem_home}:#{context[:bundler][:bundle_path]}:#{ENV['GEM_PATH']}" }
 
       BUNDLER.send(:require!)
@@ -273,7 +273,7 @@ class << self
         File.write(datadog_lockfile, File.read(app_lockfile))
       rescue StandardError => e
         # Return through the isolation envelope, rather than unwinding the child process.
-        next [nil, *Err.new(REPORT.reason('fs.write', e), e).to_a]
+        next failure('fs.write', e)
       end
 
       gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec)) }.uniq
@@ -292,21 +292,21 @@ class << self
 
         [datadog_gemfile, nil]
       rescue Patch::Injector::GemfileEvalError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.eval', e), e).to_a]
+        failure('bundler.inject.gemfile.eval', e)
       rescue Patch::Injector::GemfileInjectError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.inject', e), e).to_a]
+        failure('bundler.inject.gemfile.inject', e)
       rescue Patch::Injector::OriginalResolutionError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.resolve.original', e), e).to_a]
+        failure('bundler.inject.resolve.original', e)
       rescue Patch::Injector::ResolutionError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.resolve.injected', e), e).to_a]
+        failure('bundler.inject.resolve.injected', e)
       rescue Patch::Injector::GemfileWriteError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.write', e), e).to_a]
+        failure('bundler.inject.gemfile.write', e)
       rescue Patch::Injector::LockfileWriteError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject.lockfile.write', e), e).to_a]
+        failure('bundler.inject.lockfile.write', e)
       rescue Patch::Injector::InjectionError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject', e), e).to_a]
+        failure('bundler.inject', e)
       rescue StandardError => e
-        [nil, *Err.new(REPORT.reason('bundler.inject', e), e).to_a]
+        failure('bundler.inject', e)
       end
     end
 
@@ -314,7 +314,7 @@ class << self
 
     if err
       LOG.debug { "injector:error code:#{err} msg:#{msg.inspect} cause:#{cause.inspect}"}
-      return [nil, err]
+      return [nil, err, error_type]
     end
 
     return [false, nil] unless gemfile
@@ -401,4 +401,23 @@ class << self
     options['require'] = 'datadog/single_step_instrument' if spec.name == 'datadog'
     options
   end
+
+  def failure(stage, exception)
+    error = Err.new(REPORT.reason(stage, exception), exception)
+    type = REPORT.error_type(original_exception(exception))
+    [nil, *error.to_a] << type
+  end
+  private :failure
+
+  def original_exception(exception)
+    seen = []
+    while exception.is_a?(Patch::Injector::InjectionError)
+      return nil if seen.length >= CONTEXT::IsolatedError::MAX_CHAIN_LENGTH || seen.any? { |previous| previous.equal?(exception) }
+
+      seen << exception
+      exception = exception.cause
+    end
+    exception
+  end
+  private :original_exception
 end

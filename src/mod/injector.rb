@@ -3,6 +3,7 @@
 LOG = import 'log'
 CONTEXT = import 'context'
 BUNDLER = import 'bundler'
+REPORT = import 'report'
 
 module Patch
   module Injector
@@ -18,6 +19,7 @@ module Patch
     end
 
     class ResolutionError < InjectionError; end
+    class OriginalResolutionError < ResolutionError; end
     class GemfileWriteError < InjectionError; end
     class LockfileWriteError < InjectionError; end
     class GemfileEvalError < InjectionError; end
@@ -69,7 +71,7 @@ module Patch
                       end
           app_spec_names = app_specs.map { |spec| spec.name }
         rescue StandardError => e
-          raise ResolutionError.new("Failed to resolve original gemfile", e)
+          raise OriginalResolutionError.new("Failed to resolve original gemfile", e)
         end
 
         @deps.reject! do |dependency|
@@ -218,7 +220,8 @@ class Err
   def initialize(code, e)
     @code = code
     @message = e.message
-    @cause = e.respond_to?(:cause) ? "(#{e.cause.class}): #{e.cause.message}" : nil
+    cause = e.cause if e.respond_to?(:cause)
+    @cause = cause ? "(#{cause.class}): #{cause.message}" : nil
   end
 
   def to_s
@@ -269,7 +272,8 @@ class << self
         File.write(datadog_gemfile, File.read(app_gemfile))
         File.write(datadog_lockfile, File.read(app_lockfile))
       rescue StandardError => e
-        return [nil, *Err.new("fs.write", e).to_a]
+        # Return through the isolation envelope, rather than unwinding the child process.
+        next [nil, *Err.new(REPORT.reason('fs.write', e), e).to_a]
       end
 
       gems = package_locked.specs.map { |spec| Bundler::Dependency.new(spec.name, spec.version.to_s, options_for(spec)) }.uniq
@@ -288,19 +292,21 @@ class << self
 
         [datadog_gemfile, nil]
       rescue Patch::Injector::GemfileEvalError => e
-        [nil, *Err.new("bundler.inject.gemfile.eval", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.eval', e), e).to_a]
       rescue Patch::Injector::GemfileInjectError => e
-        [nil, *Err.new("bundler.inject.gemfile.inject", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.inject', e), e).to_a]
+      rescue Patch::Injector::OriginalResolutionError => e
+        [nil, *Err.new(REPORT.reason('bundler.inject.resolve.original', e), e).to_a]
       rescue Patch::Injector::ResolutionError => e
-        [nil, *Err.new("bundler.inject.resolve", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject.resolve.injected', e), e).to_a]
       rescue Patch::Injector::GemfileWriteError => e
-        [nil, *Err.new("bundler.inject.gemfile.write", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject.gemfile.write', e), e).to_a]
       rescue Patch::Injector::LockfileWriteError => e
-        [nil, *Err.new("bundler.inject.lockfile.write", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject.lockfile.write', e), e).to_a]
       rescue Patch::Injector::InjectionError => e
-        [nil, *Err.new("bundler.inject", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject', e), e).to_a]
       rescue StandardError => e
-        [nil, *Err.new("bundler.inject.unknown", e).to_a]
+        [nil, *Err.new(REPORT.reason('bundler.inject', e), e).to_a]
       end
     end
 

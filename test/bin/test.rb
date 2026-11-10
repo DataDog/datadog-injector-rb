@@ -1213,6 +1213,12 @@ def main(argv)
 
   start = Time.now
 
+  groups.keys.map { |group| group.slice(:engine, :version) }.uniq.each do |runtime|
+    _pid, status = run 'ruby', "#{INJECTION_DIR}/test/unit/injector_error.rb",
+      **runtime, network: false, isolated: true, title: 'unit tests'
+    exit 1 unless status.success?
+  end
+
   groups.each do |group, rows|
     uuid = SecureRandom.uuid
 

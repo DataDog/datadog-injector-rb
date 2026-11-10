@@ -218,7 +218,8 @@ class Err
   def initialize(code, e)
     @code = code
     @message = e.message
-    @cause = e.respond_to?(:cause) ? "(#{e.cause.class}): #{e.cause.message}" : nil
+    cause = e.cause if e.respond_to?(:cause)
+    @cause = cause ? "(#{cause.class}): #{cause.message}" : nil
   end
 
   def to_s

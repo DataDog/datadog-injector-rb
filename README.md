@@ -147,6 +147,42 @@ Snapshots stop at a repeated exception or 16 exceptions in total;
 message retains the `OriginalClass: message` format. Runtimes without `fork`
 continue to execute the block directly.
 
+### Error reasons
+
+`library_entrypoint.error` reports a bounded `reason:<stage>.<kind>` tag.
+Classification matches exception ancestry by name, including the textual
+ancestry preserved by `IsolatedError`. The first recognised exception in the
+outer-to-inner cause chain determines the kind. No original exception classes
+are loaded, and messages, filenames, gem names, and arbitrary class names are
+never used as metric tag values.
+
+Stages:
+
+- `exc.context`, `exc.guard`, `exc.injector`: failures escaping the corresponding
+  top-level operation.
+- `fs.write`: copying the application Gemfile and lockfile.
+- `bundler.inject.gemfile.eval`, `bundler.inject.gemfile.inject`: evaluating the
+  original Gemfile or the injected declarations.
+- `bundler.inject.resolve.original`, `bundler.inject.resolve.injected`:
+  resolving the original application or the injected bundle.
+- `bundler.inject.gemfile.write`, `bundler.inject.lockfile.write`: writing the
+  generated bundle, including lockfile checksum registration.
+- `bundler.inject`: other failures inside Bundler injection.
+
+Kinds are `missing_gem`, `dependency_conflict`, `remote_source`,
+`invalid_gemspec`, `invalid_gemfile`, `permission_denied`, `read_only`,
+`missing_file`, `no_space`, `load_error`, `syntax_error`, and `unknown`.
+For example, `bundler.inject.resolve.injected.missing_gem` distinguishes an
+unavailable injected dependency from `bundler.inject.resolve.original.unknown`.
+Known failures are classified before the `unknown` fallback; the outer
+`StandardError` handlers still let application startup continue.
+
+These replace the old unsuffixed error reasons and `exc.fatal` for new
+reports. Consumers grouping exact values should include both old and new
+codes while versions coexist, or group by their stage prefixes. Result
+metadata supplies a matching class and generic description. Guardrail abort
+reasons are unchanged.
+
 ## License
 
 Copyright (c) Datadog, Inc. See `LICENSE` file.

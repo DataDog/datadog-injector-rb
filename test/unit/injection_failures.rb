@@ -87,19 +87,19 @@ module InjectionFailuresTest
       }
 
       [
-        [:original, 'bundler.inject.resolve.original.dependency_conflict'],
-        [:injected, 'bundler.inject.resolve.injected.missing_gem'],
-        [:unexpected, 'bundler.inject.resolve.injected.unknown'],
-        [:eval, 'bundler.inject.gemfile.eval.permission_denied'],
-        [:append, 'bundler.inject.gemfile.write.read_only'],
-        [:lock, 'bundler.inject.lockfile.write.no_space'],
-      ].each do |failure, reason|
+        [:original, 'bundler.inject.resolve.original.dependency_conflict', 'Bundler::SolveFailure'],
+        [:injected, 'bundler.inject.resolve.injected.missing_gem', 'Bundler::GemNotFound'],
+        [:unexpected, 'bundler.inject.resolve.injected.unknown', 'NoMethodError'],
+        [:eval, 'bundler.inject.gemfile.eval.permission_denied', 'Errno::EACCES'],
+        [:append, 'bundler.inject.gemfile.write.read_only', 'Errno::EROFS'],
+        [:lock, 'bundler.inject.lockfile.write.no_space', 'Errno::ENOSPC'],
+      ].each do |failure, reason, type|
         Bundler.failure = failure
-        TestModules.assert_equal([nil, reason], Injector.call(context))
+        TestModules.assert_equal([nil, reason, type], Injector.call(context))
       end
 
       context[:fs][:target] = File.join(path, 'missing-directory')
-      TestModules.assert_equal([nil, 'fs.write.missing_file'], Injector.call(context))
+      TestModules.assert_equal([nil, 'fs.write.missing_file', 'Errno::ENOENT'], Injector.call(context))
     end
     puts 'Injection failures: original/injected resolution, files, and unexpected errors passed'
   ensure

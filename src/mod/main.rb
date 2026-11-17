@@ -25,7 +25,7 @@ context_status = begin
 
                    reason = report.reason('exc.context', e)
                    telemetry.emit([
-                     { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
+                     { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}", "error_type:#{report.error_type(e)}"] },
                    ], { :result => report.errored(reason) })
 
                    nil # NOOP: falls through to end
@@ -45,7 +45,7 @@ unless context_status.nil?
 
              reason = report.reason('exc.guard', e)
              telemetry.emit([
-               { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
+               { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}", "error_type:#{report.error_type(e)}"] },
              ], { :result => report.errored(reason) })
 
              :exc
@@ -85,19 +85,19 @@ unless context_status.nil?
         { :name => 'library_entrypoint.complete', :tags => ["reason:internal.skip"] },
       ], { :result => report.cached })
     else
-      injected, err = begin
-                        # TODO: pass args, e.g context, location, etc...
-                        injector.call(context_status)
-                      rescue StandardError => e
-                        log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
+      injected, err, error_type = begin
+                                   # TODO: pass args, e.g context, location, etc...
+                                   injector.call(context_status)
+                                 rescue StandardError => e
+                                   log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
-                        reason = report.reason('exc.injector', e)
-                        telemetry.emit([
-                          { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
-                        ], { :result => report.errored(reason) })
+                                   reason = report.reason('exc.injector', e)
+                                   telemetry.emit([
+                                     { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}", "error_type:#{report.error_type(e)}"] },
+                                   ], { :result => report.errored(reason) })
 
-                        [nil, :exc]
-                      end
+                                   [nil, :exc]
+                                 end
 
       case err
       when :exc
@@ -106,7 +106,7 @@ unless context_status.nil?
         log.info { "inject:error err:#{err.inspect}" }
 
         telemetry.emit([
-          { :name => 'library_entrypoint.error', :tags => ["reason:#{err}"] },
+          { :name => 'library_entrypoint.error', :tags => ["reason:#{err}", "error_type:#{error_type || 'unknown'}"] },
         ], { :result => report.errored(err) })
       else
         log.info { 'inject:complete' }

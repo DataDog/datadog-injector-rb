@@ -2,7 +2,7 @@
 
 CONTEXT = import 'context'
 
-# Codes are deliberately bounded; original class names and messages stay out of metric tags.
+# Reason codes are bounded independently of the diagnostic exception type.
 ERRORS = [
   ['missing_gem', ['Bundler::GemNotFound', 'Gem::MissingSpecError', 'Gem::MissingSpecVersionError'],
     'incompatible_dependency', 'A required gem could not be found'],
@@ -31,6 +31,19 @@ ERRORS = [
 ]
 
 class << self
+  def error_type(exception)
+    name = if exception.is_a?(CONTEXT::IsolatedError)
+             exception.original_class
+           elsif exception
+             exception.class.name
+           end
+
+    # Anonymous module paths contain process-specific addresses, not stable type names.
+    return 'unknown' unless name && /\A[A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*\z/ =~ name
+
+    String.new(name)
+  end
+
   def reason(stage, exception)
     exceptions = if exception.is_a?(CONTEXT::IsolatedError)
                    [{ :ancestors => exception.original_ancestors }] + exception.causes

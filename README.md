@@ -154,7 +154,7 @@ Classification matches exception ancestry by name, including the textual
 ancestry preserved by `IsolatedError`. The first recognised exception in the
 outer-to-inner cause chain determines the kind. No original exception classes
 are loaded, and messages, filenames, gem names, and arbitrary class names are
-never used as metric tag values.
+never used as reason values.
 
 Stages:
 
@@ -182,6 +182,31 @@ reports. Consumers grouping exact values should include both old and new
 codes while versions coexist, or group by their stage prefixes. Result
 metadata supplies a matching class and generic description. Guardrail abort
 reasons are unchanged.
+
+### Exception types
+
+Each `library_entrypoint.error` point also carries exactly one `error_type` tag:
+
+```text
+reason:bundler.inject.resolve.injected.missing_gem
+error_type:Bundler::GemNotFound
+```
+
+The selection rule is:
+
+- Skip our own `InjectionError` wrappers, selecting their first non-injector
+  cause. Wrapper traversal is bounded and detects cycles.
+- For an `IsolatedError`, use the captured original class name.
+- Otherwise, use the exception's class name without walking its causes.
+- Use `unknown` for missing exceptions, unresolvable wrapper chains, or names
+  outside an ASCII Ruby constant path, including anonymous classes and module
+  paths containing object addresses.
+
+This preserves an unrecognised named exception such as `NoMethodError` even
+when the reason ends in `unknown`. A third-party wrapper retains its own type,
+even when a recognised cause supplies the reason category. Messages and
+backtraces are not included in tags. Start, abort, and completion points do not
+carry `error_type`.
 
 ## License
 

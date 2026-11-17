@@ -220,8 +220,9 @@ class Err
   def initialize(code, e)
     @code = code
     @message = e.message
-    cause = e.cause if e.respond_to?(:cause)
-    @cause = cause ? "(#{cause.class}): #{cause.message}" : nil
+    @cause = if e.respond_to?(:cause) && (cause = e.cause)
+               "(#{cause.class}): #{cause.message}"
+             end
   end
 
   def to_s

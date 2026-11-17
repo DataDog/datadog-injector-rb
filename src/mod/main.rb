@@ -23,9 +23,10 @@ context_status = begin
                  rescue StandardError => e
                    log.info { "inject:fatal at:context exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
+                   reason = report.reason('exc.context', e)
                    telemetry.emit([
-                     { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
-                   ], { :result => report.raised(e) })
+                     { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
+                   ], { :result => report.errored(reason) })
 
                    nil # NOOP: falls through to end
                  end
@@ -42,9 +43,10 @@ unless context_status.nil?
            rescue StandardError => e
              log.info { "inject:fatal at:guard exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
+             reason = report.reason('exc.guard', e)
              telemetry.emit([
-               { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
-             ], { :result => report.raised(e) })
+               { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
+             ], { :result => report.errored(reason) })
 
              :exc
            end
@@ -89,9 +91,10 @@ unless context_status.nil?
                       rescue StandardError => e
                         log.info { "inject:fatal at:injector exc:#{e.class.name},#{e.message.inspect},#{e.backtrace.first.inspect}" }
 
+                        reason = report.reason('exc.injector', e)
                         telemetry.emit([
-                          { :name => 'library_entrypoint.error', :tags => ["reason:exc.fatal"] },
-                        ], { :result => report.raised(e) })
+                          { :name => 'library_entrypoint.error', :tags => ["reason:#{reason}"] },
+                        ], { :result => report.errored(reason) })
 
                         [nil, :exc]
                       end

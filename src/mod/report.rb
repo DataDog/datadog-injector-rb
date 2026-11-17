@@ -1,7 +1,61 @@
 # ruby-version-min: 1.8.7
 
+CONTEXT = import 'context'
+
+# Codes are deliberately bounded; original class names and messages stay out of metric tags.
+ERRORS = [
+  ['missing_gem', ['Bundler::GemNotFound', 'Gem::MissingSpecError', 'Gem::MissingSpecVersionError'],
+    'incompatible_dependency', 'A required gem could not be found'],
+  ['dependency_conflict', ['Bundler::SolveFailure', 'Bundler::VersionConflict', 'Gem::ConflictError'],
+    'incompatible_dependency', 'Dependency requirements could not be satisfied'],
+  ['remote_source', ['Bundler::HTTPError'],
+    'incompatible_environment', 'A remote gem source could not be accessed'],
+  ['invalid_gemspec', ['Bundler::GemspecError'],
+    'incompatible_dependency', 'A gem specification could not be evaluated'],
+  ['invalid_gemfile', ['Bundler::GemfileError', 'Bundler::Dsl::DSLError'],
+    'incompatible_dependency', 'A Gemfile could not be evaluated'],
+  ['permission_denied', ['Errno::EACCES', 'Errno::EPERM'],
+    'incompatible_environment', 'A required operation was denied permission'],
+  ['read_only', ['Errno::EROFS'],
+    'incompatible_environment', 'A required write targeted a read-only filesystem'],
+  ['missing_file', ['Errno::ENOENT'],
+    'incompatible_environment', 'A required file or directory could not be found'],
+  ['no_space', ['Errno::ENOSPC'],
+    'incompatible_environment', 'A required write ran out of filesystem space'],
+  ['load_error', ['LoadError'],
+    'incompatible_component', 'A required Ruby component could not be loaded'],
+  ['syntax_error', ['SyntaxError'],
+    'incompatible_component', 'Ruby source could not be parsed'],
+  ['unknown', [],
+    'internal_error', 'An unexpected exception was caught during injection'],
+]
+
 class << self
+  def reason(stage, exception)
+    exceptions = if exception.is_a?(CONTEXT::IsolatedError)
+                   [{ :ancestors => exception.original_ancestors }] + exception.causes
+                 else
+                   CONTEXT::IsolatedError.capture(exception)[:exceptions]
+                 end
+
+    exceptions.each do |error|
+      match = ERRORS.find { |entry| !(entry[1] & error[:ancestors]).empty? }
+      return "#{stage}.#{match[0]}" if match
+    end
+
+    "#{stage}.unknown"
+  end
+
+  def error_for(reason)
+    suffix = reason.to_s.split('.').last
+    ERRORS.find { |entry| entry[0] == suffix }
+  end
+  private :error_for
+
   def class_of(reason)
+    error = error_for(reason)
+    return error[2] if error
+
     case reason
 
     # safety
@@ -26,6 +80,9 @@ class << self
   end
 
   def text_for(reason, value=nil)
+    error = error_for(reason)
+    return "#{reason.sub(/\.[^.]+$/, '')}: #{error[3]}" if error
+
     case reason
 
     # safety
@@ -79,10 +136,6 @@ class << self
 
   def errored(err)
     { :result => 'error', :result_reason => text_for(err), :result_class => class_of(err) }
-  end
-
-  def raised(exc)
-    { :result => 'error', :result_reason => 'An internal exception was caught during injection', :result_class => 'internal_error' }
   end
 
   def completed(injected)

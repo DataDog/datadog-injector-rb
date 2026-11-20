@@ -84,19 +84,24 @@ class << self
 
     ::Bundler::Settings.prepend mod
 
-    require! 'bundler/cli'
-    require! 'bundler/cli/exec'
-
+    # Both `bundle exec` and Bundler.setup prepare the environment for child
+    # processes. Let Bundler save the original values for with_unbundled_env,
+    # but don't let RubyGems run setup before the child's injector can patch it.
     mod = Module.new do
-      def kernel_exec(*args)
-        ENV['RUBYOPT'] = ENV['RUBYOPT'].gsub(%r{^(.*)(?:\s+|^)(-r\s*\S+/(?:injector|host_inject|auto_inject)\.rb)(.*)$}, '\2 \1 \3')
-        ENV.delete('BUNDLER_SETUP')
-
-        super
+      def set_bundle_environment
+        super.tap do
+          injector = %r{(?:\A|\s+)(-r\s*\S+/(?:injector|host_inject|auto_inject)(?:\.rb)?)(?=\s|\z)}.match(ENV['RUBYOPT'])
+          if injector
+            ENV.delete('BUNDLER_SETUP')
+            unless injector.pre_match.empty?
+              ENV['RUBYOPT'] = "#{injector[1]} #{injector.pre_match}#{injector.post_match}"
+            end
+          end
+        end
       end
     end
 
-    ::Bundler::CLI::Exec.prepend mod
+    ::Bundler::SharedHelpers.singleton_class.prepend mod
   end
 
   private
@@ -123,7 +128,7 @@ class << self
     paths.any? { |path| File.basename(path) =~ /\Abundler?(?:\d+(?:\.\d+)*)?\z/ }
   end
 
-  def require!(feature = 'bundler')
+  def require!
     # require rubygems first, otherwise there may be a per-file mixup between
     # bundler versions (observed: stdlib vs gem home)
     require 'rubygems'
@@ -147,9 +152,9 @@ class << self
     end
 
     if @bundler_require_path
-      require File.join(@bundler_require_path, feature)
+      require File.join(@bundler_require_path, 'bundler')
     else
-      require feature
+      require 'bundler'
     end
   end
 end

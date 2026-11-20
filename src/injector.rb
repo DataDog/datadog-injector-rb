@@ -4,8 +4,8 @@
 
 # Create a lexical scope, guaranteeing no variable escape (in `main` or otherwise)
 #
-# This Module instance is not referenced and will entirely disappear on GC (as
-# well as anything it has created)
+# This Module instance has no public name. The deferred lifecycle retains it
+# through private hooks and its exit callback.
 #
 # Notes:
 # - no naked constant shall be defined here, or they will leak out.
@@ -88,5 +88,5 @@ Module.new do
     end
   end
 
-  # From this unreferenced Module instance, import main module, which executes right away
-end.import 'main'
+  # Wait for the application to request Bundler before inspecting its Gemfile.
+end.import 'intent'

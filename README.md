@@ -14,7 +14,7 @@ This project differs from conventional Ruby applications:
 
 2. **Broad Version Compatibility**: Designed to work with CRuby 1.8.7 to 3.4, as well as JRuby 9.2 to 9.4.
 
-3. **Zero Global Footprint**: The injector is carefully designed to avoid creating any global variables or constants, making it completely unintrusive to the host application. Once the injection is done, most - ideally all - of it will be unreferenced and garbage-collected.
+3. **Private State**: The injector avoids creating global variables or constants. Its deferred lifecycle retains the private loader through hooks and an exit callback.
 
 4. **No Gem Packaging**: Unlike most Ruby libraries that are packaged as gems, the injector is designed for direct inclusion via Ruby's `-r` option.
 
@@ -43,6 +43,14 @@ ruby -r/path/to/datadog-injector-rb/src/injector.rb your_application.rb
 ```
 
 Note: Best behaviour is only guaranteed when the injector is loaded _first_.
+
+Injection waits for `Bundler.setup` (including `require 'bundler/setup'`) or
+the Bundler CLI. A discoverable Gemfile, `BUNDLE_GEMFILE`, or loading Bundler
+without calling setup does not trigger injection. This lets plain Ruby run
+without evaluating application Gemfiles, while applications such as Rails
+can request Bundler later. A process which never requests Bundler reports
+`bundler.unrequested` on exit. A bundle already set up before the injector
+loads reports `bundler.active`, unless it reuses injection from its parent.
 
 Alternatively, using the `RUBYOPT` environment variable makes use of the injector automatic:
 

@@ -141,8 +141,21 @@ class << self
       version ? gem('bundler', version) : gem('bundler')
 
       spec = Gem.loaded_specs['bundler']
-      @bundler_require_path = spec.full_require_paths.find do |path|
-        File.file?(File.join(path, 'bundler.rb'))
+      # Bundler may already have been required before the injector ran.
+      loaded = $LOADED_FEATURES.find { |path| path =~ %r{/bundler\.rb\z} }
+      @bundler_require_path = if loaded
+        File.dirname(loaded)
+      else
+        spec.full_require_paths.find do |path|
+          File.file?(File.join(path, 'bundler.rb'))
+        end
+      end
+
+      # Default-gem activation does not add full_require_paths to $LOAD_PATH.
+      # Keep application requires on the same root as our absolute requires,
+      # including when a full copy coexists with Bundler in site_ruby.
+      if @bundler_require_path && !$LOAD_PATH.include?(@bundler_require_path)
+        $LOAD_PATH.unshift(@bundler_require_path)
       end
     end
 

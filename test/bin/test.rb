@@ -526,6 +526,14 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'vendored', inject: true, injector: 'datadog', packaged: true, engine: 'ruby', version: '3.4', script: 'nested.rb' } => {
+      [{ entrypoint: 'src/injector.rb' }, { entrypoint: 'test/bin/auto_inject' }] => {
+        [{}, { env: 'BUNDLE_DISABLE_EXEC_LOAD=true' }] => [
+          'telemetry should include complete',
+          'telemetry should not include error',
+        ],
+      },
+    },
     { fixture: 'git', isolated: true, inject: true, injector: 'datadog', packaged: true, env: 'BUNDLE_PATH=vendor/git' } => {
       [{}, { env: 'BUNDLE_DEPLOYMENT=true' }] => {
         [{ command: 'ruby' }, { command: 'load' }, {}] => {
@@ -1321,7 +1329,8 @@ def main(argv)
           # test with local resolution by default
           env['DD_INTERNAL_RUBY_INJECTOR_RESOLUTION'] = 'remote' if group[:resolution] == :remote
 
-          env['RUBYOPT'] = "-r#{INJECTION_DIR}/src/injector.rb"
+          env['RUBYOPT'] = "-r#{INJECTION_DIR}/#{group.fetch(:entrypoint, 'src/injector.rb')}"
+          env['EXPECTED_RUBYOPT'] = env['RUBYOPT'] if group[:entrypoint]
 
           network = group[:resolution] == :remote
 
@@ -1341,7 +1350,7 @@ def main(argv)
                               network: network,
                               title: 'run fixture in injected process'
                         elsif lock
-                          run env, *%W[ bundle exec ruby stub.rb ],
+                          run env, 'bundle', 'exec', 'ruby', group.fetch(:script, 'stub.rb'),
                               engine: group[:engine], version: group[:version], tag: group[:tag],
                               isolated: group[:isolated],
                               network: network,

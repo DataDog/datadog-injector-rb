@@ -38,7 +38,11 @@ module Patch
       # TODO: also it does not uses gempfile_path: report upstream?
       # Bundler.definition.ensure_equivalent_gemfile_and_lockfile(true)
 
-      Bundler.settings.temporary(:deployment => false, :frozen => false) do
+      # Deployment supplies an implicit vendor/bundle path. Preserve Bundler's
+      # selected path root, without its Ruby scope, before relaxing deployment.
+      path = Bundler.settings.path
+      Bundler.settings.temporary(:deployment => false, :frozen => false,
+                                 :path => path.explicit_path, 'path.system' => path.system_path) do
         builder = Bundler::Dsl.new
 
         # Gemfile original contents: read, parse, evaluate

@@ -526,8 +526,14 @@ SUITE = [
         'reported result type should be success',
       ],
     },
-    { fixture: 'git', isolated: true, inject: true, injector: 'datadog', packaged: true, env: 'BUNDLE_PATH=vendor/git' } => {
-      [{}, { env: 'BUNDLE_DEPLOYMENT=true' }] => {
+    { fixture: 'git', isolated: true, inject: true, injector: 'datadog', packaged: true } => {
+      [
+        { env: 'BUNDLE_PATH=vendor/git' },
+        { env: ['BUNDLE_PATH=vendor/git', 'BUNDLE_DEPLOYMENT=true'] },
+        { env: 'BUNDLE_DEPLOYMENT=true' },
+        { env: 'BUNDLE_APP_CONFIG=config/deployment' },
+        { env: ['BUNDLE_APP_CONFIG=config/path', 'BUNDLE_PATH=vendor/unused', 'BUNDLE_DEPLOYMENT=true'] },
+      ] => {
         [{ command: 'ruby' }, { command: 'load' }, {}] => {
           [
             { engine: 'ruby', version: '2.6' },
@@ -538,8 +544,11 @@ SUITE = [
           ] => [
             'telemetry should include complete',
             'telemetry should not include error',
+            'app gemfile should not include datadog',
+            'app lockfile should not include datadog',
             'new gemfile should include datadog',
             'new lockfile should include datadog',
+            'new lockfile should preserve checksum mode',
             'reported result type should be success',
           ],
         },

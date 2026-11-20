@@ -526,6 +526,25 @@ SUITE = [
         'reported result type should be success',
       ],
     },
+    { fixture: 'git', isolated: true, inject: true, injector: 'datadog', packaged: true, env: 'BUNDLE_PATH=vendor/git' } => {
+      [{}, { env: 'BUNDLE_DEPLOYMENT=true' }] => {
+        [{ command: 'ruby' }, { command: 'load' }, {}] => {
+          [
+            { engine: 'ruby', version: '2.6' },
+            { engine: 'ruby', version: '2.7' },
+            # Newer Bundler requires git -C, unavailable in the CentOS images.
+            { engine: 'ruby', version: '3.4', tag: '3.4-gnu-gcc' },
+            { engine: 'ruby', version: '4.0', tag: '4.0-gnu-gcc' },
+          ] => [
+            'telemetry should include complete',
+            'telemetry should not include error',
+            'new gemfile should include datadog',
+            'new lockfile should include datadog',
+            'reported result type should be success',
+          ],
+        },
+      },
+    },
     { fixture: 'partial', isolated: true, inject: true, injector: 'datadog', packaged: true } => {
       [
         { install: false, command: 'install', env: 'BUNDLE_PATH=vendor/partial' },
@@ -1033,7 +1052,7 @@ def with_toolchain(*args)
   ['sh', '-c', 'if [ -f /opt/rh/devtoolset-10/enable ]; then . /opt/rh/devtoolset-10/enable; fi; exec "$@"', 'sh', *args]
 end
 
-def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true, isolated: false)
+def run(*args, engine: nil, version: nil, tag: nil, arch: nil, title: nil, network: true, isolated: false)
   env = args.first.is_a?(Hash) ? args.shift : {}
 
   runtime = RUNTIMES[engine][version] if engine && version
@@ -1046,7 +1065,7 @@ def run(*args, engine: nil, version: nil, arch: nil, title: nil, network: true, 
   }.merge(env)
 
   if runtime
-    tag = runtime[:tag]
+    tag ||= runtime[:tag]
     arch ||= resolve_arch(runtime[:arch])
 
     # TODO: what if arch is still nil now
@@ -1235,7 +1254,7 @@ def main(argv)
         package_gem_home = "#{package_basepath}/ruby/#{group[:version]}.0" + (group[:version] == '3.5' ? '+0' : '')
 
         env = { 'BUNDLE_GEMFILE' => "#{package_gem_home}/Gemfile", 'GEM_HOME' => package_gem_home, 'BUNDLE_PATH' => package_basepath, 'BUNDLE_APP_CONFIG' => '/nowhere' }
-        pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], title: 'package injection gems'
+        pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], tag: group[:tag], title: 'package injection gems'
         if status.exitstatus != 0
           puts "╭─────┈┄╌"
           puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1248,12 +1267,21 @@ def main(argv)
 
       Dir.chdir tmp do
         Dir.chdir fixture do
+          if File.file?('setup.rb')
+            pid, status = run 'ruby', 'setup.rb', engine: group[:engine], version: group[:version], tag: group[:tag],
+                              isolated: group[:isolated], network: false, title: 'prepare fixture'
+            if status.exitstatus != 0
+              err << group
+              next
+            end
+          end
+
           if lock
             # ignore fixture config, notably development/frozen which would prevent lock
             env = { 'BUNDLE_APP_CONFIG' => '/nowhere' }
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
-            pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], isolated: group[:isolated], title: 'lock fixture'
+            pid, status = run env, *with_toolchain('bundle', 'lock'), engine: group[:engine], version: group[:version], tag: group[:tag], isolated: group[:isolated], title: 'lock fixture'
             if status.exitstatus != 0
               puts "╭─────┈┄╌"
               puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1267,7 +1295,7 @@ def main(argv)
             env['BUNDLE_FORCE_RUBY_PLATFORM'] = 'true' if group[:force_ruby_platform]
             env['BUNDLE_LOCKFILE_CHECKSUMS'] = group[:checksums].to_s if group.key?(:checksums)
             if group[:install] != false
-              pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], isolated: group[:isolated], title: 'install fixture'
+              pid, status = run env, *with_toolchain('bundle', 'install'), engine: group[:engine], version: group[:version], tag: group[:tag], isolated: group[:isolated], title: 'install fixture'
               if status.exitstatus != 0
                 puts "╭─────┈┄╌"
                 puts "│ ERR: #{group.inspect} uuid: #{uuid}"
@@ -1299,19 +1327,28 @@ def main(argv)
 
           pid, status = if group[:command] == 'install'
                           run env, *with_toolchain('bundle', 'install'),
-                              engine: group[:engine], version: group[:version],
+                              engine: group[:engine], version: group[:version], tag: group[:tag],
                               isolated: group[:isolated],
                               network: true,
                               title: 'install fixture with injection'
+                        elsif group[:command] == 'ruby' || group[:command] == 'load'
+                          # Ruby's exec path starts a fresh VM and can hide stale
+                          # RubyGems state. Exercise setup in the injected VM too.
+                          command = group[:command] == 'ruby' ? %w[ ruby stub.rb ] : %w[ bundle exec ./stub.rb ]
+                          run env, *command,
+                              engine: group[:engine], version: group[:version], tag: group[:tag],
+                              isolated: group[:isolated],
+                              network: network,
+                              title: 'run fixture in injected process'
                         elsif lock
                           run env, *%W[ bundle exec ruby stub.rb ],
-                              engine: group[:engine], version: group[:version],
+                              engine: group[:engine], version: group[:version], tag: group[:tag],
                               isolated: group[:isolated],
                               network: network,
                               title: 'run fixture stub'
                         else
                           run env, *%W[ ruby stub.rb ],
-                              engine: group[:engine], version: group[:version],
+                              engine: group[:engine], version: group[:version], tag: group[:tag],
                               isolated: group[:isolated],
                               network: network,
                               title: 'run fixture stub'

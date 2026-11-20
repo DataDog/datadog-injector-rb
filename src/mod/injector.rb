@@ -367,11 +367,11 @@ class << self
       # back rather than recomputing it.
       ENV['GEM_PATH'] = Gem.path.join(File::PATH_SEPARATOR)
 
-      # Set GEM_HOME in ENV for child processes. This does not reset @paths
-      # or Gem.dir in the current process, but child processes (and any
-      # future Gem.paths reset) will resolve GEM_HOME to the app's bundle
-      # path, where app gems are installed.
       ENV['GEM_HOME'] = app_bundle_path
+
+      # The Bundler patch derives its bundle path from Gem.dir. Refresh it
+      # before Bundler caches the old home as the Git gem installation path.
+      Gem.paths = { 'GEM_HOME' => ENV['GEM_HOME'], 'GEM_PATH' => ENV['GEM_PATH'] }
 
       BUNDLER.patch!
     else

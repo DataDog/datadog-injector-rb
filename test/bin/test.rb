@@ -82,7 +82,7 @@ SUITE = [
       'telemetry should include metadata.tracer_version',
       'telemetry should include start',
       'injection should abort',
-      'abort reason should include bundler.unlocked',
+      'injection should abort before inspecting Bundler',
       'telemetry start should not include result report',
       'telemetry conclusion should include result report',
       'reported result type should be abort',
@@ -116,7 +116,7 @@ SUITE = [
       'telemetry should include metadata.tracer_version',
       'telemetry should include start',
       'injection should abort',
-      'abort reason should include bundler.unbundled',
+      'injection should abort before inspecting Bundler',
       'telemetry start should not include result report',
       'telemetry conclusion should include result report',
       'reported result type should be abort',
@@ -761,6 +761,16 @@ end
 
 example 'injection should abort' do |context|
   context.telemetry.any? { |e| e['points'].any? { |p| p['name'] == 'library_entrypoint.abort' } }
+end
+
+example 'injection should abort before inspecting Bundler' do |context|
+  !File.exist?(File.join(context.path, 'datadog.gemfile')) &&
+    context.telemetry.any? do |event|
+      event['points'].any? do |point|
+        point['name'] == 'library_entrypoint.abort' &&
+          (point['tags'] & ['reason:bundler.unrequested', 'reason:runtime.parser']).any?
+      end
+    end
 end
 
 example 'abort reason should include runtime.version' do |context|

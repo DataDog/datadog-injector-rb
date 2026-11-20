@@ -385,6 +385,8 @@ class << self
     end
 
     ENV['BUNDLE_GEMFILE'] = gemfile
+    # Deferred entry can follow Bundler's initial path/configuration lookups.
+    Bundler.reset_paths! if defined?(Bundler)
 
     [true, nil]
   end

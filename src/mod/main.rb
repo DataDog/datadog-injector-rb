@@ -7,9 +7,6 @@
 telemetry = import 'telemetry'
 process = import 'process'
 
-# Emit start immediately
-telemetry.emit([{ :name => 'library_entrypoint.start' }])
-
 log = import 'log'
 report = import 'report'
 
